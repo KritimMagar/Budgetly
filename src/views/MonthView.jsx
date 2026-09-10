@@ -14,8 +14,12 @@ export default function MonthView({ month, onMonthChange }) {
     [state.transactions, month],
   )
   const totals = useMemo(() => monthTotals(monthTransactions), [monthTransactions])
-  const breakdown = useMemo(
-    () => breakdownByCategory(monthTransactions, state.categories),
+  const spending = useMemo(
+    () => breakdownByCategory(monthTransactions, state.categories, { type: 'expense' }),
+    [monthTransactions, state.categories],
+  )
+  const income = useMemo(
+    () => breakdownByCategory(monthTransactions, state.categories, { type: 'income' }),
     [monthTransactions, state.categories],
   )
 
@@ -29,12 +33,26 @@ export default function MonthView({ month, onMonthChange }) {
           description="Add a transaction, or use the arrows above to look at another month."
         />
       ) : (
-        <CategoryBreakdown
-          rows={breakdown.rows}
-          totalCents={breakdown.totalCents}
-          currency={state.settings.currency}
-          theme={state.settings.theme}
-        />
+        <>
+          <CategoryBreakdown
+            title="Spending by category"
+            emptyText="No expenses recorded this month."
+            rows={spending.rows}
+            totalCents={spending.totalCents}
+            currency={state.settings.currency}
+            theme={state.settings.theme}
+          />
+          {income.rows.length > 0 ? (
+            <CategoryBreakdown
+              title="Income by source"
+              emptyText="No income recorded this month."
+              rows={income.rows}
+              totalCents={income.totalCents}
+              currency={state.settings.currency}
+              theme={state.settings.theme}
+            />
+          ) : null}
+        </>
       )}
     </div>
   )
