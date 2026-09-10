@@ -6,10 +6,10 @@ import {
 } from './categories.js'
 import { isStorableTransaction } from './transactions.js'
 import { isValidCents } from './money.js'
-import { colorKeyAt, isColorKey } from './palette.js'
+import { COLOR_KEYS, colorKeyAt, isColorKey } from './palette.js'
 
 export const STORAGE_KEY = 'budgetly.v1'
-export const SCHEMA_VERSION = 1
+export const SCHEMA_VERSION = 2
 
 export const DEFAULT_SETTINGS = { currency: 'EUR', theme: 'dark' }
 
@@ -65,6 +65,42 @@ function normalizeCategories(raw) {
 }
 
 /**
+ * Two categories of the same kind sharing a colour is only cosmetic, but it is
+ * avoidable when seeding: give the later one the next free slot.
+ */
+function resolveColorCollisions(categories) {
+  const usedByKind = new Map()
+  return categories.map((category) => {
+    const used = usedByKind.get(category.kind) ?? new Set()
+    // Past the eighth slot there is nothing free left, and colours repeat.
+    const colorKey = used.has(category.colorKey)
+      ? (COLOR_KEYS.find((key) => !used.has(key)) ?? category.colorKey)
+      : category.colorKey
+    used.add(colorKey)
+    usedByKind.set(category.kind, used)
+    return colorKey === category.colorKey ? category : { ...category, colorKey }
+  })
+}
+
+/**
+ * Adds any default category the stored data is missing, which is how state
+ * written before income categories existed — an income list holding nothing
+ * but Other — gets the full set. Stored copies always win, so a renamed
+ * default keeps its name, and custom categories keep their place after the
+ * defaults of their kind.
+ */
+function seedMissingDefaults(categories) {
+  const stored = new Map(categories.map((category) => [category.id, category]))
+  const seeded = createDefaultCategories().map((fallback) => stored.get(fallback.id) ?? fallback)
+  const seededIds = new Set(seeded.map((category) => category.id))
+
+  for (const category of categories) {
+    if (!seededIds.has(category.id)) seeded.push(category)
+  }
+  return resolveColorCollisions(seeded)
+}
+
+/**
  * Rebuilds a trustworthy state from unknown input: anything unrecognised is
  * dropped, and transactions pointing at a missing category fall back to Other
  * rather than disappearing.
@@ -73,7 +109,13 @@ export function normalizeState(raw) {
   const base = createEmptyState()
   if (!raw || typeof raw !== 'object') return base
 
-  const categories = normalizeCategories(raw.categories)
+  // Data older than the current schema is missing categories that did not
+  // exist when it was written. Only then are defaults seeded: from this
+  // version on, a default the user deleted stays deleted.
+  const isCurrent = Number.isFinite(raw.version) && raw.version >= SCHEMA_VERSION
+  const categories = isCurrent
+    ? normalizeCategories(raw.categories)
+    : seedMissingDefaults(normalizeCategories(raw.categories))
   const kindById = new Map(categories.map((category) => [category.id, category.kind]))
 
   const transactions = []
