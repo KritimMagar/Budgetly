@@ -1,4 +1,5 @@
 import { COLOR_KEYS, colorKeyAt } from './palette.js'
+import { DEFAULT_ICON } from './icons.js'
 
 /**
  * Categories are typed: an expense is filed under an expense category and
@@ -15,18 +16,18 @@ export const OTHER_CATEGORY_ID = FALLBACK_CATEGORY_IDS.expense
 export const CATEGORY_KINDS = ['expense', 'income']
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'cat_food', name: 'Food', kind: 'expense', colorKey: 'blue', builtin: true },
-  { id: 'cat_rent', name: 'Rent', kind: 'expense', colorKey: 'orange', builtin: true },
-  { id: 'cat_transport', name: 'Transport', kind: 'expense', colorKey: 'aqua', builtin: true },
-  { id: 'cat_bills', name: 'Bills', kind: 'expense', colorKey: 'yellow', builtin: true },
-  { id: 'cat_fun', name: 'Fun', kind: 'expense', colorKey: 'magenta', builtin: true },
-  { id: 'cat_health', name: 'Health', kind: 'expense', colorKey: 'green', builtin: true },
-  { id: FALLBACK_CATEGORY_IDS.expense, name: 'Other', kind: 'expense', colorKey: 'violet', builtin: true },
+  { id: 'cat_food', name: 'Food', kind: 'expense', colorKey: 'blue', icon: 'utensils', builtin: true },
+  { id: 'cat_rent', name: 'Rent', kind: 'expense', colorKey: 'orange', icon: 'house', builtin: true },
+  { id: 'cat_transport', name: 'Transport', kind: 'expense', colorKey: 'aqua', icon: 'bus', builtin: true },
+  { id: 'cat_bills', name: 'Bills', kind: 'expense', colorKey: 'yellow', icon: 'receipt', builtin: true },
+  { id: 'cat_fun', name: 'Fun', kind: 'expense', colorKey: 'magenta', icon: 'gamepad-2', builtin: true },
+  { id: 'cat_health', name: 'Health', kind: 'expense', colorKey: 'green', icon: 'heart-pulse', builtin: true },
+  { id: FALLBACK_CATEGORY_IDS.expense, name: 'Other', kind: 'expense', colorKey: 'violet', icon: DEFAULT_ICON, builtin: true },
 
-  { id: 'cat_salary', name: 'Salary', kind: 'income', colorKey: 'blue', builtin: true },
-  { id: 'cat_freelance', name: 'Freelance', kind: 'income', colorKey: 'orange', builtin: true },
-  { id: 'cat_gift', name: 'Gift', kind: 'income', colorKey: 'aqua', builtin: true },
-  { id: FALLBACK_CATEGORY_IDS.income, name: 'Other', kind: 'income', colorKey: 'yellow', builtin: true },
+  { id: 'cat_salary', name: 'Salary', kind: 'income', colorKey: 'blue', icon: 'wallet', builtin: true },
+  { id: 'cat_freelance', name: 'Freelance', kind: 'income', colorKey: 'orange', icon: 'laptop', builtin: true },
+  { id: 'cat_gift', name: 'Gift', kind: 'income', colorKey: 'aqua', icon: 'gift', builtin: true },
+  { id: FALLBACK_CATEGORY_IDS.income, name: 'Other', kind: 'income', colorKey: 'yellow', icon: 'coins', builtin: true },
 ]
 
 export const MAX_CATEGORY_NAME = 24

@@ -3,7 +3,8 @@ import Button from '../ui/Button.jsx'
 import Modal from '../ui/Modal.jsx'
 import CategoryEditor from './CategoryEditor.jsx'
 import { categoriesOfKind, fallbackCategoryId, findCategory, isFallbackCategory } from '../../domain/categories.js'
-import { colorFor } from '../../domain/palette.js'
+import CategoryIcon from '../ui/CategoryIcon.jsx'
+import { nextColorKey } from '../../domain/categories.js'
 
 /**
  * One list per kind. Income and expense categories are managed apart, so
@@ -17,7 +18,7 @@ export default function CategoryManager({
   usageCounts,
   theme,
   onAdd,
-  onRename,
+  onUpdate,
   onDelete,
 }) {
   const [editing, setEditing] = useState(null)
@@ -50,11 +51,7 @@ export default function CategoryManager({
               onClick={() => setEditing({ id: row.id })}
               className="flex w-full items-center gap-3 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
             >
-              <span
-                aria-hidden="true"
-                className="h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: colorFor(row.colorKey, theme) }}
-              />
+              <CategoryIcon name={row.icon} colorKey={row.colorKey} theme={theme} />
               <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.name}</span>
               <span className="shrink-0 text-xs tabular text-zinc-500 dark:text-zinc-400">
                 {usageCounts[row.id] ?? 0}
@@ -79,9 +76,11 @@ export default function CategoryManager({
           canDelete={category ? !isFallbackCategory(category.id) : false}
           usageCount={category ? (usageCounts[category.id] ?? 0) : 0}
           fallbackName={fallbackName}
-          onSubmit={(name) => {
-            if (category) onRename(category.id, name)
-            else onAdd(name, kind)
+          colorKey={category?.colorKey ?? nextColorKey(categories, kind)}
+          theme={theme}
+          onSubmit={(name, icon) => {
+            if (category) onUpdate(category.id, { name, icon })
+            else onAdd(name, kind, icon)
             close()
           }}
           onDelete={() => {

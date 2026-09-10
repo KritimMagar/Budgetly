@@ -80,6 +80,27 @@ describe('normalizeState', () => {
     ])
   })
 
+  it('gives categories stored before icons existed the icon their default carries', () => {
+    const state = normalizeState({
+      version: 2,
+      categories: [
+        { id: 'cat_food', name: 'Food', kind: 'expense' },
+        { id: 'cat_salary', name: 'Salary', kind: 'income' },
+        { id: 'cat_mine', name: 'Mine', kind: 'expense' },
+        { id: 'cat_kept', name: 'Kept', kind: 'expense', icon: 'music' },
+        { id: 'cat_odd', name: 'Odd', kind: 'expense', icon: 'not-an-icon' },
+      ],
+    })
+    const icons = Object.fromEntries(state.categories.map((c) => [c.id, c.icon]))
+
+    expect(icons.cat_food).toBe('utensils')
+    expect(icons.cat_salary).toBe('wallet')
+    expect(icons.cat_kept).toBe('music')
+    // A category the defaults know nothing about falls back to the neutral one.
+    expect(icons.cat_mine).toBe('tag')
+    expect(icons.cat_odd).toBe('tag')
+  })
+
   it('rehomes a transaction filed under a category of the wrong kind', () => {
     const state = normalizeState({
       transactions: [

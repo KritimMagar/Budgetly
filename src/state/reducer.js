@@ -5,6 +5,7 @@ import {
   isFallbackCategory,
 } from '../domain/categories.js'
 import { colorKeyAt, isColorKey } from '../domain/palette.js'
+import { DEFAULT_ICON, isIconName } from '../domain/icons.js'
 import { isValidCents } from '../domain/money.js'
 import { normalizeState } from '../domain/schema.js'
 import { isStorableTransaction } from '../domain/transactions.js'
@@ -50,7 +51,7 @@ export function reducer(state, action) {
     }
 
     case 'category/add': {
-      const { id, name, kind, colorKey } = action.payload
+      const { id, name, kind, colorKey, icon } = action.payload
       const trimmed = String(name ?? '').trim()
       if (trimmed === '' || !isCategoryKind(kind) || hasCategory(state, id)) return state
       return {
@@ -64,20 +65,33 @@ export function reducer(state, action) {
             colorKey: isColorKey(colorKey)
               ? colorKey
               : colorKeyAt(categoriesOfKind(state.categories, kind).length),
+            icon: isIconName(icon) ? icon : DEFAULT_ICON,
             builtin: false,
           },
         ],
       }
     }
 
-    case 'category/rename': {
-      const { id, name } = action.payload
-      const trimmed = String(name ?? '').trim()
-      if (trimmed === '' || !hasCategory(state, id)) return state
+    case 'category/update': {
+      const { id, name, icon } = action.payload
+      if (!hasCategory(state, id)) return state
+
+      const patch = {}
+      if (name !== undefined) {
+        const trimmed = String(name).trim()
+        if (trimmed === '') return state
+        patch.name = trimmed
+      }
+      if (icon !== undefined) {
+        if (!isIconName(icon)) return state
+        patch.icon = icon
+      }
+      if (Object.keys(patch).length === 0) return state
+
       return {
         ...state,
         categories: state.categories.map((category) =>
-          category.id === id ? { ...category, name: trimmed } : category,
+          category.id === id ? { ...category, ...patch } : category,
         ),
       }
     }

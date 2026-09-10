@@ -6,6 +6,7 @@ import {
 } from './categories.js'
 import { isStorableTransaction } from './transactions.js'
 import { isValidCents } from './money.js'
+import { DEFAULT_ICON, isIconName } from './icons.js'
 import { MIDNIGHT, isValidTime } from './dates.js'
 import { COLOR_KEYS, colorKeyAt, isColorKey } from './palette.js'
 
@@ -34,6 +35,9 @@ function normalizeSettings(raw) {
 }
 
 function normalizeCategories(raw) {
+  // Categories stored before icons existed get the icon their default carries,
+  // so the built-in set does not come back blank.
+  const defaultIcons = new Map(createDefaultCategories().map((c) => [c.id, c.icon]))
   const categories = []
   const seen = new Set()
 
@@ -50,6 +54,7 @@ function normalizeCategories(raw) {
       name,
       kind,
       colorKey: isColorKey(candidate.colorKey) ? candidate.colorKey : colorKeyAt(sameKind),
+      icon: isIconName(candidate.icon) ? candidate.icon : (defaultIcons.get(candidate.id) ?? DEFAULT_ICON),
       builtin: candidate.builtin === true,
     })
   }

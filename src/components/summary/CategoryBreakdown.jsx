@@ -1,4 +1,5 @@
 import { formatMoney } from '../../domain/money.js'
+import CategoryIcon from '../ui/CategoryIcon.jsx'
 import { colorFor } from '../../domain/palette.js'
 
 function formatPercent(percent) {
@@ -28,7 +29,10 @@ export default function CategoryBreakdown({ title, emptyText, rows, totalCents, 
           {rows.map((row) => (
             <li key={row.categoryId}>
               <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-sm font-medium">{row.name}</span>
+                <span className="flex min-w-0 items-center gap-2">
+                  <CategoryIcon name={row.icon} colorKey={row.colorKey} theme={theme} size={16} />
+                  <span className="truncate text-sm font-medium">{row.name}</span>
+                </span>
                 <span className="shrink-0 text-sm tabular">
                   {formatMoney(row.cents, currency)}
                   <span className="ml-2 text-zinc-500 dark:text-zinc-400">

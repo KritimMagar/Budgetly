@@ -20,12 +20,13 @@ export function deleteTransaction(id) {
   return { type: 'transaction/delete', payload: { id } }
 }
 
-export function addCategory(name, kind, colorKey) {
-  return { type: 'category/add', payload: { id: createId('cat'), name, kind, colorKey } }
+export function addCategory(name, kind, { colorKey, icon } = {}) {
+  return { type: 'category/add', payload: { id: createId('cat'), name, kind, colorKey, icon } }
 }
 
-export function renameCategory(id, name) {
-  return { type: 'category/rename', payload: { id, name } }
+/** Patch may carry a name, an icon, or both. */
+export function updateCategory(id, patch) {
+  return { type: 'category/update', payload: { id, ...patch } }
 }
 
 /** Transactions in the removed category move to `reassignTo`, which must share its kind. */

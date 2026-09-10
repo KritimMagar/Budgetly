@@ -38,6 +38,7 @@ export function breakdownByCategory(transactions, categories, { type = 'expense'
       categoryId,
       name: category?.name ?? 'Unknown',
       colorKey: category?.colorKey ?? 'violet',
+      icon: category?.icon,
       cents,
       percent: totalCents === 0 ? 0 : (cents / totalCents) * 100,
     }
@@ -98,6 +99,7 @@ export function budgetProgress(monthTransactions, budgets, categories) {
         categoryId: category.id,
         name: category.name,
         colorKey: category.colorKey,
+        icon: category.icon,
         budgetCents,
         spentCents: spent,
         remainingCents: budgetCents - spent,
@@ -109,6 +111,7 @@ export function budgetProgress(monthTransactions, budgets, categories) {
         categoryId: category.id,
         name: category.name,
         colorKey: category.colorKey,
+        icon: category.icon,
         budgetCents: null,
         spentCents: spent,
         remainingCents: null,

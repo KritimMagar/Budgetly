@@ -77,22 +77,53 @@ describe('transaction/delete', () => {
 })
 
 describe('categories', () => {
-  it('adds and renames', () => {
-    const added = reducer(createEmptyState(), actions.addCategory('  Books  ', 'expense', 'red'))
+  it('adds with a colour, an icon and a kind', () => {
+    const added = reducer(
+      createEmptyState(),
+      actions.addCategory('  Books  ', 'expense', { colorKey: 'red', icon: 'book-open' }),
+    )
     const category = added.categories.at(-1)
-    expect(category).toMatchObject({ name: 'Books', kind: 'expense', colorKey: 'red', builtin: false })
+    expect(category).toMatchObject({
+      name: 'Books',
+      kind: 'expense',
+      colorKey: 'red',
+      icon: 'book-open',
+      builtin: false,
+    })
 
-    // An unknown slot is replaced with the next one its own kind has not used.
-    const fallback = reducer(createEmptyState(), actions.addCategory('Pets', 'expense', '#ff0000'))
-    expect(fallback.categories.at(-1).colorKey).toBe('red')
+    // Unknown slot and unknown icon are both replaced rather than stored.
+    const fallback = reducer(
+      createEmptyState(),
+      actions.addCategory('Pets', 'expense', { colorKey: '#ff0000', icon: 'not-an-icon' }),
+    )
+    expect(fallback.categories.at(-1)).toMatchObject({ colorKey: 'red', icon: 'tag' })
 
     // A category has to be one kind or the other.
     const base = createEmptyState()
-    expect(reducer(base, actions.addCategory('Savings', 'transfer', 'red'))).toBe(base)
+    expect(reducer(base, actions.addCategory('Savings', 'transfer', { colorKey: 'red' }))).toBe(base)
+  })
 
-    const renamed = reducer(added, actions.renameCategory(category.id, 'Reading'))
-    expect(renamed.categories.at(-1).name).toBe('Reading')
-    expect(reducer(added, actions.renameCategory(category.id, '   '))).toBe(added)
+  it('updates a name, an icon, or both', () => {
+    const added = reducer(createEmptyState(), actions.addCategory('Books', 'expense', { icon: 'book-open' }))
+    const { id } = added.categories.at(-1)
+
+    expect(reducer(added, actions.updateCategory(id, { name: 'Reading' })).categories.at(-1)).toMatchObject({
+      name: 'Reading',
+      icon: 'book-open',
+    })
+    expect(reducer(added, actions.updateCategory(id, { icon: 'music' })).categories.at(-1)).toMatchObject({
+      name: 'Books',
+      icon: 'music',
+    })
+    expect(
+      reducer(added, actions.updateCategory(id, { name: 'Reading', icon: 'music' })).categories.at(-1),
+    ).toMatchObject({ name: 'Reading', icon: 'music' })
+
+    // Nothing usable in the patch leaves the state untouched.
+    expect(reducer(added, actions.updateCategory(id, { name: '   ' }))).toBe(added)
+    expect(reducer(added, actions.updateCategory(id, { icon: 'nope' }))).toBe(added)
+    expect(reducer(added, actions.updateCategory(id, {}))).toBe(added)
+    expect(reducer(added, actions.updateCategory('cat_missing', { name: 'X' }))).toBe(added)
   })
 
   it('moves transactions and drops the budget when a category is deleted', () => {

@@ -4,15 +4,32 @@ import EmptyState from '../components/ui/EmptyState.jsx'
 import Modal from '../components/ui/Modal.jsx'
 import TransactionForm from '../components/transactions/TransactionForm.jsx'
 import TransactionList from '../components/transactions/TransactionList.jsx'
-import { sortTransactions } from '../domain/transactions.js'
+import { EMPTY_FILTERS, filterTransactions, isFilterActive, sortTransactions } from '../domain/transactions.js'
+import { findCategory } from '../domain/categories.js'
+import { formatMonthLabel, monthOf } from '../domain/dates.js'
 import { addTransaction, deleteTransaction, updateTransaction } from '../state/actions.js'
 import { useStore } from '../state/hooks.js'
 
-export default function TransactionsView() {
+export default function TransactionsView({ filters = EMPTY_FILTERS, onFiltersChange }) {
   const { state, dispatch } = useStore()
   const [editor, setEditor] = useState(null)
 
-  const transactions = useMemo(() => sortTransactions(state.transactions), [state.transactions])
+  const transactions = useMemo(
+    () =>
+      sortTransactions(
+        filterTransactions(state.transactions, filters, { categories: state.categories }),
+      ),
+    [state.transactions, state.categories, filters],
+  )
+
+  const filtered = isFilterActive(filters)
+  const filterLabels = [
+    filters.categoryId !== 'all' ? findCategory(state.categories, filters.categoryId)?.name : null,
+    // A from/to covering one whole month reads as that month.
+    filters.from && filters.to && monthOf(filters.from) === monthOf(filters.to)
+      ? formatMonthLabel(monthOf(filters.from))
+      : null,
+  ].filter(Boolean)
   const editing = editor?.id ? state.transactions.find((t) => t.id === editor.id) : null
 
   const close = () => setEditor(null)
@@ -41,10 +58,29 @@ export default function TransactionsView() {
         </Button>
       </div>
 
+      {filtered ? (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
+          <p className="min-w-0 truncate text-sm text-zinc-600 dark:text-zinc-300">
+            Showing {filterLabels.join(' · ') || 'a filtered list'}
+          </p>
+          <button
+            type="button"
+            onClick={() => onFiltersChange?.(EMPTY_FILTERS)}
+            className="shrink-0 rounded-lg px-2 py-1 text-sm font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+          >
+            Clear
+          </button>
+        </div>
+      ) : null}
+
       {transactions.length === 0 ? (
         <EmptyState
-          title="No transactions yet"
-          description="Add your first income or expense to start tracking."
+          title={filtered ? 'Nothing matches' : 'No transactions yet'}
+          description={
+            filtered
+              ? 'No transactions in this category for this month.'
+              : 'Add your first income or expense to start tracking.'
+          }
           action={<Button onClick={() => setEditor({ id: null })}>Add transaction</Button>}
         />
       ) : (

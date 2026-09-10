@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { isStorableTransaction, sortTransactions, validateTransaction } from './transactions.js'
+import {
+  EMPTY_FILTERS,
+  filterTransactions,
+  isFilterActive,
+  isStorableTransaction,
+  sortTransactions,
+  validateTransaction,
+} from './transactions.js'
 import { createDefaultCategories } from './categories.js'
 
 const categories = createDefaultCategories()
@@ -118,5 +125,40 @@ describe('sortTransactions', () => {
     const rows = [{ id: 'a', date: '2026-09-01' }, { id: 'b', date: '2026-09-10' }]
     sortTransactions(rows)
     expect(rows.map((row) => row.id)).toEqual(['a', 'b'])
+  })
+})
+
+describe('filterTransactions', () => {
+  const rows = [
+    { id: 'a', type: 'expense', categoryId: 'cat_food', date: '2026-09-01', note: 'Weekly shop' },
+    { id: 'b', type: 'expense', categoryId: 'cat_rent', date: '2026-09-15', note: 'September rent' },
+    { id: 'c', type: 'income', categoryId: 'cat_salary', date: '2026-09-30', note: 'Monthly pay' },
+    { id: 'd', type: 'expense', categoryId: 'cat_food', date: '2026-10-01', note: '' },
+  ]
+  const ids = (filters) => filterTransactions(rows, { ...EMPTY_FILTERS, ...filters }, { categories }).map((r) => r.id)
+
+  it('returns everything when nothing is set', () => {
+    expect(filterTransactions(rows)).toHaveLength(4)
+    expect(isFilterActive(EMPTY_FILTERS)).toBe(false)
+    expect(isFilterActive({ ...EMPTY_FILTERS, categoryId: 'cat_food' })).toBe(true)
+  })
+
+  it('narrows by category, by type and by an inclusive date range', () => {
+    expect(ids({ categoryId: 'cat_food' })).toEqual(['a', 'd'])
+    expect(ids({ type: 'income' })).toEqual(['c'])
+    expect(ids({ from: '2026-09-01', to: '2026-09-30' })).toEqual(['a', 'b', 'c'])
+    expect(ids({ from: '2026-09-15', to: '2026-09-15' })).toEqual(['b'])
+  })
+
+  it('combines every filter at once', () => {
+    expect(ids({ categoryId: 'cat_food', from: '2026-09-01', to: '2026-09-30' })).toEqual(['a'])
+    expect(ids({ type: 'income', categoryId: 'cat_food' })).toEqual([])
+  })
+
+  it('matches text against the note or the category name, ignoring case', () => {
+    expect(ids({ query: 'RENT' })).toEqual(['b'])
+    expect(ids({ query: 'food' })).toEqual(['a', 'd'])
+    expect(ids({ query: '  shop ' })).toEqual(['a'])
+    expect(ids({ query: 'nothing here' })).toEqual([])
   })
 })

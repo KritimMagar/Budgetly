@@ -3,7 +3,7 @@ import CategoryManager from '../components/settings/CategoryManager.jsx'
 import CurrencySetting from '../components/settings/CurrencySetting.jsx'
 import DataTransfer from '../components/settings/DataTransfer.jsx'
 import SegmentedControl from '../components/ui/SegmentedControl.jsx'
-import { addCategory, deleteCategory, renameCategory, replaceState, updateSettings } from '../state/actions.js'
+import { addCategory, deleteCategory, replaceState, updateCategory, updateSettings } from '../state/actions.js'
 import { useStore } from '../state/hooks.js'
 import { mergeImport } from '../domain/csv.js'
 
@@ -28,8 +28,8 @@ export default function SettingsView() {
     categories: state.categories,
     usageCounts,
     theme: state.settings.theme,
-    onAdd: (name, kind) => dispatch(addCategory(name, kind)),
-    onRename: (id, name) => dispatch(renameCategory(id, name)),
+    onAdd: (name, kind, icon) => dispatch(addCategory(name, kind, { icon })),
+    onUpdate: (id, patch) => dispatch(updateCategory(id, patch)),
     onDelete: (id, reassignTo) => dispatch(deleteCategory(id, reassignTo)),
   }
 

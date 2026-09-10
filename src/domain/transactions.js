@@ -1,5 +1,5 @@
 import { isValidCents, parseAmount } from './money.js'
-import { MIDNIGHT, isValidDate, isValidTime } from './dates.js'
+import { MIDNIGHT, isValidDate, isValidTime, isWithinRange } from './dates.js'
 
 export const TRANSACTION_TYPES = ['income', 'expense']
 export const MAX_NOTE_LENGTH = 140
@@ -82,5 +82,34 @@ export function sortTransactions(transactions) {
     if (timeA !== timeB) return timeA < timeB ? 1 : -1
     if (a.createdAt !== b.createdAt) return (b.createdAt ?? 0) - (a.createdAt ?? 0)
     return a.id < b.id ? 1 : -1
+  })
+}
+
+/** Everything unset: the whole list, unfiltered. */
+export const EMPTY_FILTERS = { query: '', type: 'all', categoryId: 'all', from: '', to: '' }
+
+export function isFilterActive(filters) {
+  return Object.keys(EMPTY_FILTERS).some((key) => (filters[key] ?? '') !== EMPTY_FILTERS[key])
+}
+
+/**
+ * Narrows the list by any combination of free text, type, category and an
+ * inclusive date range. Text matches the note or the category name, so
+ * searching "food" finds a category as readily as a note.
+ */
+export function filterTransactions(transactions, filters = EMPTY_FILTERS, { categories = [] } = {}) {
+  const query = String(filters.query ?? '').trim().toLowerCase()
+  const names = new Map(categories.map((category) => [category.id, category.name.toLowerCase()]))
+
+  return transactions.filter((transaction) => {
+    if (filters.type && filters.type !== 'all' && transaction.type !== filters.type) return false
+    if (filters.categoryId && filters.categoryId !== 'all' && transaction.categoryId !== filters.categoryId) {
+      return false
+    }
+    if (!isWithinRange(transaction.date, filters.from, filters.to)) return false
+
+    if (query === '') return true
+    const note = String(transaction.note ?? '').toLowerCase()
+    return note.includes(query) || (names.get(transaction.categoryId) ?? '').includes(query)
   })
 }

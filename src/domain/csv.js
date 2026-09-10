@@ -1,6 +1,7 @@
 import { MIDNIGHT, isValidTime } from './dates.js'
 import { centsToDecimalString } from './money.js'
 import { createId } from './ids.js'
+import { DEFAULT_ICON } from './icons.js'
 import { categoriesOfKind, fallbackCategoryId, findCategory, nextColorKey, validateCategoryName } from './categories.js'
 import { isTransactionType, sortTransactions, validateTransaction } from './transactions.js'
 
@@ -141,7 +142,7 @@ export function transactionsFromCSV(text, { categories }) {
     if (!category) {
       const named = validateCategoryName(name, known(), { kind: type })
       category = named.ok
-        ? { id: createId('cat'), name: named.name, kind: type, colorKey: nextColorKey(known(), type), builtin: false }
+        ? { id: createId('cat'), name: named.name, kind: type, colorKey: nextColorKey(known(), type), icon: DEFAULT_ICON, builtin: false }
         : findCategory(known(), fallbackCategoryId(type))
       if (named.ok) created.push(category)
     }

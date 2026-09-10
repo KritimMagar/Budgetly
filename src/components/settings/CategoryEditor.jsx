@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import Button from '../ui/Button.jsx'
 import Field, { controlClass, controlErrorClass } from '../ui/Field.jsx'
+import CategoryIcon from '../ui/CategoryIcon.jsx'
 import { MAX_CATEGORY_NAME, validateCategoryName } from '../../domain/categories.js'
+import { DEFAULT_ICON, ICON_GROUPS } from '../../domain/icons.js'
 
 /**
  * Adds or renames one category, and deletes it after saying how many
@@ -14,11 +16,14 @@ export default function CategoryEditor({
   canDelete = true,
   usageCount = 0,
   fallbackName,
+  colorKey,
+  theme,
   onSubmit,
   onDelete,
   onCancel,
 }) {
   const [name, setName] = useState(category?.name ?? '')
+  const [icon, setIcon] = useState(category?.icon ?? DEFAULT_ICON)
   const [error, setError] = useState(null)
   const [confirmingDelete, setConfirmingDelete] = useState(false)
 
@@ -29,7 +34,7 @@ export default function CategoryEditor({
       setError(result.error)
       return
     }
-    onSubmit(result.name)
+    onSubmit(result.name, icon)
   }
 
   return (
@@ -51,6 +56,40 @@ export default function CategoryEditor({
           />
         )}
       </Field>
+
+      <fieldset>
+        <legend className="mb-1.5 text-sm font-medium text-zinc-700 dark:text-zinc-300">Icon</legend>
+        <div className="max-h-56 space-y-3 overflow-y-auto rounded-xl border border-zinc-200 p-2 dark:border-zinc-800">
+          {ICON_GROUPS.map((group) => (
+            <div key={group.label}>
+              <p className="px-1 pb-1 text-xs text-zinc-500 dark:text-zinc-400">{group.label}</p>
+              <div className="flex flex-wrap gap-1">
+                {group.names.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => setIcon(option)}
+                    aria-pressed={icon === option}
+                    aria-label={option.replace(/-/g, ' ')}
+                    className={`grid h-10 w-10 place-items-center rounded-xl border transition-colors ${
+                      icon === option
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
+                        : 'border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800'
+                    }`}
+                  >
+                    <CategoryIcon
+                      name={option}
+                      colorKey={colorKey ?? category?.colorKey}
+                      theme={theme}
+                      size={20}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </fieldset>
 
       {confirmingDelete ? (
         <div className="rounded-xl border border-rose-300 bg-rose-50 p-3 dark:border-rose-900 dark:bg-rose-950/40">

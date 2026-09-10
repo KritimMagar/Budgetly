@@ -9,12 +9,15 @@ import Modal from '../components/ui/Modal.jsx'
 import { categoriesOfKind, findCategory } from '../domain/categories.js'
 import { formatMoney } from '../domain/money.js'
 import { budgetDonut, budgetProgress, transactionsInMonth } from '../domain/summary.js'
+import { sortTransactions } from '../domain/transactions.js'
 import { setBudget } from '../state/actions.js'
 import { useStore } from '../state/hooks.js'
 
-export default function BudgetsView({ month, onMonthChange }) {
+export default function BudgetsView({ month, onMonthChange, onSeeCategory }) {
   const { state, dispatch } = useStore()
   const [editingId, setEditingId] = useState(null)
+  // A set, because more than one row can be open at a time.
+  const [expanded, setExpanded] = useState(() => new Set())
 
   const monthTransactions = useMemo(
     () => transactionsInMonth(state.transactions, month),
@@ -26,6 +29,24 @@ export default function BudgetsView({ month, onMonthChange }) {
   )
 
   const donut = useMemo(() => budgetDonut(rows, totals), [rows, totals])
+
+  const byCategory = useMemo(() => {
+    const grouped = new Map()
+    for (const transaction of sortTransactions(monthTransactions)) {
+      const list = grouped.get(transaction.categoryId)
+      if (list) list.push(transaction)
+      else grouped.set(transaction.categoryId, [transaction])
+    }
+    return grouped
+  }, [monthTransactions])
+
+  function toggle(categoryId) {
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (!next.delete(categoryId)) next.add(categoryId)
+      return next
+    })
+  }
 
   // Anything spent on this month is already a row, so this is only the
   // categories left to budget ahead for.
@@ -89,7 +110,11 @@ export default function BudgetsView({ month, onMonthChange }) {
                 row={row}
                 currency={currency}
                 theme={state.settings.theme}
+                transactions={byCategory.get(row.categoryId) ?? []}
+                expanded={expanded.has(row.categoryId)}
+                onToggle={toggle}
                 onEdit={setEditingId}
+                onSeeAll={onSeeCategory}
               />
             ))}
           </ul>

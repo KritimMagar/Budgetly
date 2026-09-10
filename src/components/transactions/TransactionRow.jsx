@@ -1,6 +1,6 @@
 import { formatDateLabel, formatTimeLabel } from '../../domain/dates.js'
 import { formatMoney, signedCents } from '../../domain/money.js'
-import { colorFor } from '../../domain/palette.js'
+import CategoryIcon from '../ui/CategoryIcon.jsx'
 
 export default function TransactionRow({ transaction, category, currency, theme, onEdit }) {
   const income = transaction.type === 'income'
@@ -12,11 +12,7 @@ export default function TransactionRow({ transaction, category, currency, theme,
         onClick={() => onEdit(transaction)}
         className="flex w-full items-center gap-3 px-1 py-3 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900/60"
       >
-        <span
-          aria-hidden="true"
-          className="h-8 w-1.5 shrink-0 rounded-full"
-          style={{ backgroundColor: colorFor(category?.colorKey, theme) }}
-        />
+        <CategoryIcon name={category?.icon} colorKey={category?.colorKey} theme={theme} tile />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{category?.name ?? 'Unknown'}</span>
           {transaction.note ? (
