@@ -1,5 +1,6 @@
 import { isInMonth } from './dates.js'
 import { findCategory } from './categories.js'
+import { sumCents } from './money.js'
 
 /** All arithmetic here stays in integer cents; only percentages are floats. */
 
@@ -131,5 +132,58 @@ export function budgetProgress(monthTransactions, budgets, categories) {
       remainingCents: budgetedCents - spentCents,
       overCount: budgeted.filter((row) => row.state === 'over').length,
     },
+  }
+}
+
+/** Five categories plus the unused remainder — past six segments a ring stops being readable. */
+export const MAX_DONUT_SLICES = 5
+
+/**
+ * The month's budget as a whole: one slice per budgeted category that was
+ * spent on, plus whatever is left unspent. Slices are ordered largest first,
+ * and the smallest are folded together rather than shaved into unreadable
+ * slivers.
+ *
+ * Spending in categories with no limit is left out, because it is not part of
+ * this whole — the same reason it stays out of the header total.
+ */
+export function budgetDonut(rows, totals) {
+  const spent = rows
+    .filter((row) => row.budgetCents !== null && row.spentCents > 0)
+    .map((row) => ({
+      key: row.categoryId,
+      name: row.name,
+      colorKey: row.colorKey,
+      cents: row.spentCents,
+    }))
+    .sort((a, b) => (b.cents !== a.cents ? b.cents - a.cents : a.name.localeCompare(b.name)))
+
+  let categories = spent
+  if (spent.length > MAX_DONUT_SLICES) {
+    const shown = spent.slice(0, MAX_DONUT_SLICES - 1)
+    const folded = spent.slice(MAX_DONUT_SLICES - 1)
+    categories = [
+      ...shown,
+      {
+        key: 'folded',
+        name: `${folded.length} smaller categories`,
+        colorKey: null,
+        cents: sumCents(folded.map((slice) => slice.cents)),
+      },
+    ]
+  }
+
+  // Overspending makes the whole bigger than the budget; there is no remainder.
+  const whole = Math.max(totals.budgetedCents, totals.spentCents)
+  const slices = [...categories]
+  if (totals.remainingCents > 0) {
+    slices.push({ key: 'remaining', name: 'Left to spend', colorKey: null, cents: totals.remainingCents })
+  }
+
+  return {
+    slices: slices.map((slice) => ({ ...slice, percent: whole === 0 ? 0 : (slice.cents / whole) * 100 })),
+    categoryCount: categories.length,
+    usedPercent: totals.budgetedCents === 0 ? 0 : (totals.spentCents / totals.budgetedCents) * 100,
+    overCents: Math.max(0, totals.spentCents - totals.budgetedCents),
   }
 }

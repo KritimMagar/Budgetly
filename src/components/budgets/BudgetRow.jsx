@@ -52,7 +52,14 @@ export default function BudgetRow({ row, currency, theme, onEdit }) {
         className="w-full rounded-xl px-1 py-2 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
       >
         <div className="flex items-baseline justify-between gap-3">
-          <span className="truncate text-sm font-medium">{row.name}</span>
+          <span className="flex min-w-0 items-baseline gap-2">
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: colorFor(row.colorKey, theme) }}
+            />
+            <span className="truncate text-sm font-medium">{row.name}</span>
+          </span>
           <span className="shrink-0 text-sm tabular text-zinc-500 dark:text-zinc-400">
             {formatMoney(row.spentCents, currency)} of {formatMoney(row.budgetCents, currency)}
           </span>

@@ -162,7 +162,7 @@ export default function TransactionForm({
           </Button>
           {transaction ? (
             <Button variant="danger" onClick={() => setConfirmingDelete(true)} aria-label="Delete transaction">
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M4 7h16M9 7V4.5h6V7M6.5 7l1 12.5h9l1-12.5M10 10.5v6M14 10.5v6" />
               </svg>
             </Button>

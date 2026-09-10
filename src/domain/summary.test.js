@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { breakdownByCategory, budgetProgress, monthTotals, monthsWithData, transactionsInMonth } from './summary.js'
+import { breakdownByCategory, budgetDonut, budgetProgress, monthTotals, monthsWithData, transactionsInMonth } from './summary.js'
 import { createDefaultCategories } from './categories.js'
 
 const categories = createDefaultCategories()
@@ -188,5 +188,67 @@ describe('budgetProgress', () => {
       categories,
     )
     expect(rows).toEqual([])
+  })
+})
+
+describe('budgetDonut', () => {
+  const build = (spend, budgets) => {
+    const { rows, totals } = budgetProgress(
+      Object.entries(spend).map(([categoryId, amountCents]) => txn({ categoryId, amountCents })),
+      budgets,
+      categories,
+    )
+    return budgetDonut(rows, totals)
+  }
+
+  it('splits the budget into category spend plus what is left', () => {
+    const donut = build({ cat_food: 5000, cat_fun: 2500 }, { cat_food: 20000, cat_fun: 5000 })
+
+    expect(donut.slices.map((slice) => [slice.name, slice.cents])).toEqual([
+      ['Food', 5000],
+      ['Fun', 2500],
+      ['Left to spend', 17500],
+    ])
+    // Slices are shares of the whole budget, so they add up to 100%.
+    expect(donut.slices.reduce((sum, slice) => sum + slice.percent, 0)).toBeCloseTo(100)
+    expect(donut.usedPercent).toBe(30)
+    expect(donut.overCents).toBe(0)
+  })
+
+  it('drops the remainder and reports the overspend once the budget is passed', () => {
+    const donut = build({ cat_food: 25000 }, { cat_food: 20000 })
+
+    expect(donut.slices.map((slice) => slice.name)).toEqual(['Food'])
+    expect(donut.slices[0].percent).toBe(100)
+    expect(donut.usedPercent).toBe(125)
+    expect(donut.overCents).toBe(5000)
+  })
+
+  it('leaves out categories with no limit, and those with a limit but no spend', () => {
+    const donut = build({ cat_rent: 90000, cat_food: 5000 }, { cat_food: 20000, cat_fun: 5000 })
+
+    expect(donut.slices.map((slice) => slice.name)).toEqual(['Food', 'Left to spend'])
+    expect(donut.categoryCount).toBe(1)
+  })
+
+  it('folds the smallest together rather than drawing unreadable slivers', () => {
+    const donut = build(
+      { cat_food: 6000, cat_rent: 5000, cat_transport: 4000, cat_bills: 3000, cat_fun: 200, cat_health: 100 },
+      { cat_food: 9000, cat_rent: 9000, cat_transport: 9000, cat_bills: 9000, cat_fun: 9000, cat_health: 9000 },
+    )
+
+    expect(donut.categoryCount).toBe(5)
+    expect(donut.slices.map((slice) => slice.name)).toEqual([
+      'Food', 'Rent', 'Transport', 'Bills', '2 smaller categories', 'Left to spend',
+    ])
+    expect(donut.slices[4].cents).toBe(300)
+    expect(donut.slices[4].colorKey).toBe(null)
+  })
+
+  it('stays at zero when nothing is budgeted', () => {
+    const donut = build({ cat_food: 5000 }, {})
+    expect(donut.slices).toEqual([])
+    expect(donut.usedPercent).toBe(0)
+    expect(donut.overCents).toBe(0)
   })
 })

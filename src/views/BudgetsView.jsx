@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import MonthSwitcher from '../components/layout/MonthSwitcher.jsx'
+import BudgetDonut from '../components/budgets/BudgetDonut.jsx'
 import BudgetEditor from '../components/budgets/BudgetEditor.jsx'
 import BudgetRow from '../components/budgets/BudgetRow.jsx'
 import Button from '../components/ui/Button.jsx'
@@ -7,7 +8,7 @@ import EmptyState from '../components/ui/EmptyState.jsx'
 import Modal from '../components/ui/Modal.jsx'
 import { categoriesOfKind, findCategory } from '../domain/categories.js'
 import { formatMoney } from '../domain/money.js'
-import { budgetProgress, transactionsInMonth } from '../domain/summary.js'
+import { budgetDonut, budgetProgress, transactionsInMonth } from '../domain/summary.js'
 import { setBudget } from '../state/actions.js'
 import { useStore } from '../state/hooks.js'
 
@@ -23,6 +24,8 @@ export default function BudgetsView({ month, onMonthChange }) {
     () => budgetProgress(monthTransactions, state.budgets, state.categories),
     [monthTransactions, state.budgets, state.categories],
   )
+
+  const donut = useMemo(() => budgetDonut(rows, totals), [rows, totals])
 
   // Anything spent on this month is already a row, so this is only the
   // categories left to budget ahead for.
@@ -62,6 +65,17 @@ export default function BudgetsView({ month, onMonthChange }) {
               </p>
             ) : null}
           </div>
+          {donut.categoryCount >= 2 ? (
+            <div className="mt-4">
+              <BudgetDonut
+                donut={donut}
+                currency={currency}
+                theme={state.settings.theme}
+                label={`${Math.round(donut.usedPercent)}% of the month's budget used, split across ${donut.categoryCount} categories`}
+              />
+            </div>
+          ) : null}
+
           {totals.overCount > 0 ? (
             <p className="mt-1 text-sm text-rose-600 dark:text-rose-400">
               {totals.overCount} {totals.overCount === 1 ? 'category is' : 'categories are'} over budget

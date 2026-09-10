@@ -34,7 +34,7 @@ export default function TransactionsView() {
           {transactions.length} {transactions.length === 1 ? 'transaction' : 'transactions'}
         </p>
         <Button size="sm" onClick={() => setEditor({ id: null })}>
-          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
             <path d="M12 5v14M5 12h14" />
           </svg>
           Add
