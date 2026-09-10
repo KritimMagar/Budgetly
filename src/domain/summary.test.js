@@ -128,19 +128,65 @@ describe('budgetProgress', () => {
     expect(fun.remainingCents).toBe(0)
   })
 
-  it('skips categories without a budget and totals the rest', () => {
+  it('lists a category spent on without a limit, and leaves it out of the totals', () => {
     const { rows, totals } = budgetProgress(
       [txn({ categoryId: 'cat_bills', amountCents: 9999 }), txn({ categoryId: 'cat_food', amountCents: 5000 })],
       { cat_food: 20000 },
       categories,
     )
-    expect(rows).toHaveLength(1)
+
+    expect(rows.map((row) => [row.name, row.state, row.spentCents])).toEqual([
+      ['Food', 'under', 5000],
+      ['Bills', 'unbudgeted', 9999],
+    ])
+    // The header reads "spent of budgeted", so unbudgeted spend stays out of it.
     expect(totals).toEqual({ budgetedCents: 20000, spentCents: 5000, remainingCents: 15000, overCount: 0 })
   })
 
-  it('has nothing to report when no budgets are set', () => {
-    const { rows, totals } = budgetProgress([txn({ amountCents: 100 })], {}, categories)
+  it('gives an unbudgeted row nothing to measure progress against', () => {
+    const { rows } = budgetProgress([txn({ categoryId: 'cat_food', amountCents: 5000 })], {}, categories)
+    expect(rows[0]).toMatchObject({
+      name: 'Food',
+      state: 'unbudgeted',
+      spentCents: 5000,
+      budgetCents: null,
+      remainingCents: null,
+      percent: null,
+    })
+  })
+
+  it('orders budgeted rows first, then unbudgeted ones by spend', () => {
+    const { rows } = budgetProgress(
+      [
+        txn({ categoryId: 'cat_rent', amountCents: 95000 }),
+        txn({ categoryId: 'cat_fun', amountCents: 2400 }),
+        txn({ categoryId: 'cat_bills', amountCents: 6340 }),
+        txn({ categoryId: 'cat_food', amountCents: 8185 }),
+      ],
+      { cat_bills: 6000, cat_food: 25000 },
+      categories,
+    )
+
+    expect(rows.map((row) => row.name)).toEqual(['Bills', 'Food', 'Rent', 'Fun'])
+  })
+
+  it('lists a budgeted category that has not been spent on, but not an untouched one', () => {
+    const { rows } = budgetProgress([], { cat_food: 20000 }, categories)
+    expect(rows.map((row) => [row.name, row.spentCents])).toEqual([['Food', 0]])
+  })
+
+  it('has nothing to report with no budgets and no spending', () => {
+    const { rows, totals } = budgetProgress([], {}, categories)
     expect(rows).toEqual([])
     expect(totals.budgetedCents).toBe(0)
+  })
+
+  it('never lists an income category, however it was spent', () => {
+    const { rows } = budgetProgress(
+      [txn({ categoryId: 'cat_salary', amountCents: 5000 }), txn({ categoryId: 'cat_salary', type: 'income', amountCents: 900 })],
+      {},
+      categories,
+    )
+    expect(rows).toEqual([])
   })
 })

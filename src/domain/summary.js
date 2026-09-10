@@ -62,9 +62,12 @@ function budgetState(spentCents, budgetCents) {
 }
 
 /**
- * Progress against each category budget for one month. Only expenses count,
- * and `remainingCents` goes negative once the budget is passed, so the view
- * can say "over by" without recomputing anything.
+ * One row per expense category that either has a budget or was spent on this
+ * month, so spending is visible before a limit exists. Budgeted rows carry
+ * progress; the rest carry the amount spent and nothing to measure it against.
+ *
+ * Ordering: over budget first, then nearest the limit, then unbudgeted rows by
+ * spend descending.
  */
 export function budgetProgress(monthTransactions, budgets, categories) {
   const spentByCategory = new Map()
@@ -76,41 +79,57 @@ export function budgetProgress(monthTransactions, budgets, categories) {
     )
   }
 
-  const rows = []
+  const budgeted = []
+  const unbudgeted = []
   let budgetedCents = 0
   let spentCents = 0
 
   for (const category of categories) {
     if (category.kind !== 'expense') continue
+
     const budgetCents = budgets[category.id]
-    if (!budgetCents) continue
-
     const spent = spentByCategory.get(category.id) ?? 0
-    budgetedCents += budgetCents
-    spentCents += spent
 
-    rows.push({
-      categoryId: category.id,
-      name: category.name,
-      colorKey: category.colorKey,
-      budgetCents,
-      spentCents: spent,
-      remainingCents: budgetCents - spent,
-      percent: (spent / budgetCents) * 100,
-      state: budgetState(spent, budgetCents),
-    })
+    if (budgetCents) {
+      budgetedCents += budgetCents
+      spentCents += spent
+      budgeted.push({
+        categoryId: category.id,
+        name: category.name,
+        colorKey: category.colorKey,
+        budgetCents,
+        spentCents: spent,
+        remainingCents: budgetCents - spent,
+        percent: (spent / budgetCents) * 100,
+        state: budgetState(spent, budgetCents),
+      })
+    } else if (spent > 0) {
+      unbudgeted.push({
+        categoryId: category.id,
+        name: category.name,
+        colorKey: category.colorKey,
+        budgetCents: null,
+        spentCents: spent,
+        remainingCents: null,
+        percent: null,
+        state: 'unbudgeted',
+      })
+    }
   }
 
   // Trouble first: over budget, then closest to the limit.
-  rows.sort((a, b) => b.percent - a.percent)
+  budgeted.sort((a, b) => (b.percent !== a.percent ? b.percent - a.percent : a.name.localeCompare(b.name)))
+  unbudgeted.sort((a, b) =>
+    b.spentCents !== a.spentCents ? b.spentCents - a.spentCents : a.name.localeCompare(b.name),
+  )
 
   return {
-    rows,
+    rows: [...budgeted, ...unbudgeted],
     totals: {
       budgetedCents,
       spentCents,
       remainingCents: budgetedCents - spentCents,
-      overCount: rows.filter((row) => row.state === 'over').length,
+      overCount: budgeted.filter((row) => row.state === 'over').length,
     },
   }
 }

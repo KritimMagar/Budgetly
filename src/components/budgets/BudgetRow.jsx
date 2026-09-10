@@ -17,6 +17,33 @@ function barColor(row, theme) {
 export default function BudgetRow({ row, currency, theme, onEdit }) {
   const over = row.state === 'over'
 
+  // Spent on, but with no limit to measure it against: show the spend and the
+  // way to set one, rather than hiding the category behind a separate picker.
+  if (row.state === 'unbudgeted') {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={() => onEdit(row.categoryId)}
+          className="flex w-full items-center gap-3 rounded-xl px-1 py-2.5 text-left transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-800/60"
+        >
+          <span
+            aria-hidden="true"
+            className="h-3 w-3 shrink-0 rounded-full"
+            style={{ backgroundColor: colorFor(row.colorKey, theme) }}
+          />
+          <span className="min-w-0 flex-1 truncate text-sm font-medium">{row.name}</span>
+          <span className="shrink-0 text-sm tabular text-zinc-500 dark:text-zinc-400">
+            {formatMoney(row.spentCents, currency)}
+          </span>
+          <span className="shrink-0 rounded-lg border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+            Set limit
+          </span>
+        </button>
+      </li>
+    )
+  }
+
   return (
     <li>
       <button
