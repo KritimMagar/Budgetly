@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { createEmptyState, normalizeState } from './schema.js'
-import { OTHER_CATEGORY_ID } from './categories.js'
+import { FALLBACK_CATEGORY_IDS, OTHER_CATEGORY_ID, categoriesOfKind } from './categories.js'
 
 const transaction = {
   id: 'txn_1',
@@ -17,8 +17,11 @@ describe('createEmptyState', () => {
   it('starts with the default categories and dark EUR settings', () => {
     const state = createEmptyState()
     expect(state.settings).toEqual({ currency: 'EUR', theme: 'dark' })
-    expect(state.categories.map((c) => c.name)).toEqual([
+    expect(categoriesOfKind(state.categories, 'expense').map((c) => c.name)).toEqual([
       'Food', 'Rent', 'Transport', 'Bills', 'Fun', 'Health', 'Other',
+    ])
+    expect(categoriesOfKind(state.categories, 'income').map((c) => c.name)).toEqual([
+      'Salary', 'Freelance', 'Gift', 'Other',
     ])
     expect(state.transactions).toEqual([])
     expect(state.budgets).toEqual({})
@@ -47,14 +50,40 @@ describe('normalizeState', () => {
     expect(state.transactions.map((t) => t.id)).toEqual(['txn_1'])
   })
 
-  it('moves transactions whose category vanished to Other', () => {
-    const state = normalizeState({ transactions: [{ ...transaction, categoryId: 'cat_gone' }] })
-    expect(state.transactions[0].categoryId).toBe(OTHER_CATEGORY_ID)
+  it('moves transactions whose category vanished to the fallback for their type', () => {
+    const expense = normalizeState({ transactions: [{ ...transaction, categoryId: 'cat_gone' }] })
+    expect(expense.transactions[0].categoryId).toBe(OTHER_CATEGORY_ID)
+
+    const income = normalizeState({
+      transactions: [{ ...transaction, type: 'income', categoryId: 'cat_gone' }],
+    })
+    expect(income.transactions[0].categoryId).toBe(FALLBACK_CATEGORY_IDS.income)
   })
 
-  it('drops budgets that are not positive cents or point nowhere', () => {
+  it('rehomes a transaction filed under a category of the wrong kind', () => {
     const state = normalizeState({
-      budgets: { cat_food: 30000, cat_rent: -5, cat_fun: 1.5, cat_gone: 100 },
+      transactions: [
+        { ...transaction, id: 'txn_a', type: 'income', categoryId: 'cat_food' },
+        { ...transaction, id: 'txn_b', type: 'expense', categoryId: 'cat_salary' },
+      ],
+    })
+    expect(state.transactions.map((t) => t.categoryId)).toEqual([
+      FALLBACK_CATEGORY_IDS.income,
+      OTHER_CATEGORY_ID,
+    ])
+  })
+
+  it('keeps a fallback for both kinds and defaults an unknown kind to expense', () => {
+    const state = normalizeState({ categories: [{ id: 'cat_x', name: 'X', kind: 'savings' }] })
+    expect(state.categories.find((c) => c.id === 'cat_x')?.kind).toBe('expense')
+    for (const fallbackId of Object.values(FALLBACK_CATEGORY_IDS)) {
+      expect(state.categories.some((c) => c.id === fallbackId), fallbackId).toBe(true)
+    }
+  })
+
+  it('drops budgets that are not positive cents, point nowhere, or belong to income', () => {
+    const state = normalizeState({
+      budgets: { cat_food: 30000, cat_rent: -5, cat_fun: 1.5, cat_gone: 100, cat_salary: 500 },
     })
     expect(state.budgets).toEqual({ cat_food: 30000 })
   })

@@ -5,6 +5,11 @@ import TypeToggle from './TypeToggle.jsx'
 import { centsToDecimalString, currencySymbol } from '../../domain/money.js'
 import { todayISO } from '../../domain/dates.js'
 import { validateTransaction } from '../../domain/transactions.js'
+import { categoriesOfKind, findCategory } from '../../domain/categories.js'
+
+function firstCategoryId(categories, kind) {
+  return categoriesOfKind(categories, kind)[0]?.id ?? ''
+}
 
 function draftFrom(transaction, fallbackDate) {
   if (!transaction) {
@@ -28,26 +33,41 @@ export default function TransactionForm({
   categories,
   currency,
   defaultDate = todayISO(),
-  defaultCategoryId = categories[0]?.id ?? '',
   onSubmit,
   onDelete,
   onCancel,
 }) {
   const [draft, setDraft] = useState(() => {
     const initial = draftFrom(transaction, defaultDate)
-    return initial.categoryId ? initial : { ...initial, categoryId: defaultCategoryId }
+    if (initial.categoryId) return initial
+    return { ...initial, categoryId: firstCategoryId(categories, initial.type) }
   })
   const [errors, setErrors] = useState({})
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+  // Only the categories belonging to the chosen type are ever offered.
+  const options = categoriesOfKind(categories, draft.type)
 
   const set = (field) => (value) => {
     setDraft((current) => ({ ...current, [field]: value }))
     setErrors(({ [field]: _cleared, ...rest }) => rest)
   }
 
+  function handleTypeChange(type) {
+    setDraft((current) => {
+      const stillValid = findCategory(categories, current.categoryId)?.kind === type
+      return {
+        ...current,
+        type,
+        categoryId: stillValid ? current.categoryId : firstCategoryId(categories, type),
+      }
+    })
+    setErrors(({ type: _t, categoryId: _c, ...rest }) => rest)
+  }
+
   function handleSubmit(event) {
     event.preventDefault()
-    const result = validateTransaction(draft, { categoryIds: categories.map((c) => c.id) })
+    const result = validateTransaction(draft, { categories })
     if (!result.ok) {
       setErrors(result.errors)
       return
@@ -57,7 +77,7 @@ export default function TransactionForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-4">
-      <TypeToggle value={draft.type} onChange={set('type')} />
+      <TypeToggle value={draft.type} onChange={handleTypeChange} />
 
       <Field label="Amount" error={errors.amount}>
         {(props) => (
@@ -80,7 +100,7 @@ export default function TransactionForm({
         )}
       </Field>
 
-      <Field label="Category" error={errors.categoryId}>
+      <Field label={draft.type === 'income' ? 'Income category' : 'Expense category'} error={errors.categoryId}>
         {(props) => (
           <select
             {...props}
@@ -88,7 +108,7 @@ export default function TransactionForm({
             onChange={(event) => set('categoryId')(event.target.value)}
             className={`${controlClass} ${errors.categoryId ? controlErrorClass : ''}`}
           >
-            {categories.map((category) => (
+            {options.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>

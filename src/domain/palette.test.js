@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CATEGORY_SLOTS, COLOR_KEYS, colorFor, colorKeyAt, isColorKey } from './palette.js'
-import { createDefaultCategories, nextColorKey } from './categories.js'
+import { categoriesOfKind, createDefaultCategories, nextColorKey } from './categories.js'
 
 describe('palette', () => {
   it('gives every slot a distinct step per theme', () => {
@@ -30,16 +30,25 @@ describe('palette', () => {
 })
 
 describe('default categories', () => {
-  it('uses distinct slots in the CVD-safe order', () => {
-    const keys = createDefaultCategories().map((category) => category.colorKey)
-    expect(new Set(keys).size).toBe(keys.length)
-    expect(keys.every(isColorKey)).toBe(true)
-    expect(keys).toEqual(COLOR_KEYS.slice(0, keys.length))
+  it('uses distinct slots in the CVD-safe order within each kind', () => {
+    for (const kind of ['expense', 'income']) {
+      const keys = categoriesOfKind(createDefaultCategories(), kind).map((c) => c.colorKey)
+      expect(new Set(keys).size, kind).toBe(keys.length)
+      expect(keys.every(isColorKey), kind).toBe(true)
+      expect(keys, kind).toEqual(COLOR_KEYS.slice(0, keys.length))
+    }
   })
 
-  it('hands a new category the next unused slot', () => {
+  it('starts each kind again at the first slot, since they never share a chart', () => {
     const categories = createDefaultCategories()
-    expect(nextColorKey(categories)).toBe('red')
-    expect(nextColorKey([{ colorKey: 'blue' }])).toBe('orange')
+    expect(categoriesOfKind(categories, 'expense')[0].colorKey).toBe('blue')
+    expect(categoriesOfKind(categories, 'income')[0].colorKey).toBe('blue')
+  })
+
+  it('hands a new category the next slot unused by its own kind', () => {
+    const categories = createDefaultCategories()
+    expect(nextColorKey(categories, 'expense')).toBe('red')
+    expect(nextColorKey(categories, 'income')).toBe('magenta')
+    expect(nextColorKey([{ kind: 'income', colorKey: 'blue' }], 'income')).toBe('orange')
   })
 })

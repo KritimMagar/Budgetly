@@ -20,15 +20,15 @@ export function deleteTransaction(id) {
   return { type: 'transaction/delete', payload: { id } }
 }
 
-export function addCategory(name, colorKey) {
-  return { type: 'category/add', payload: { id: createId('cat'), name, colorKey } }
+export function addCategory(name, kind, colorKey) {
+  return { type: 'category/add', payload: { id: createId('cat'), name, kind, colorKey } }
 }
 
 export function renameCategory(id, name) {
   return { type: 'category/rename', payload: { id, name } }
 }
 
-/** Transactions in the removed category move to `reassignTo`. */
+/** Transactions in the removed category move to `reassignTo`, which must share its kind. */
 export function deleteCategory(id, reassignTo) {
   return { type: 'category/delete', payload: { id, reassignTo } }
 }

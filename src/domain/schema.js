@@ -1,4 +1,9 @@
-import { createDefaultCategories, OTHER_CATEGORY_ID } from './categories.js'
+import {
+  FALLBACK_CATEGORY_IDS,
+  createDefaultCategories,
+  fallbackCategoryId,
+  isCategoryKind,
+} from './categories.js'
 import { isStorableTransaction } from './transactions.js'
 import { isValidCents } from './money.js'
 import { colorKeyAt, isColorKey } from './palette.js'
@@ -35,21 +40,28 @@ function normalizeCategories(raw) {
     if (!candidate || typeof candidate.id !== 'string' || typeof candidate.name !== 'string') continue
     const name = candidate.name.trim()
     if (name === '' || seen.has(candidate.id)) continue
+
+    const kind = isCategoryKind(candidate.kind) ? candidate.kind : 'expense'
+    const sameKind = categories.filter((category) => category.kind === kind).length
     seen.add(candidate.id)
     categories.push({
       id: candidate.id,
       name,
-      colorKey: isColorKey(candidate.colorKey) ? candidate.colorKey : colorKeyAt(categories.length),
+      kind,
+      colorKey: isColorKey(candidate.colorKey) ? candidate.colorKey : colorKeyAt(sameKind),
       builtin: candidate.builtin === true,
     })
   }
 
-  // Without a fallback category there is nowhere to move orphaned transactions.
-  if (!seen.has(OTHER_CATEGORY_ID)) {
-    const other = createDefaultCategories().find((c) => c.id === OTHER_CATEGORY_ID)
-    categories.push(other)
+  // Each kind needs its fallback: without one there is nowhere to move
+  // transactions whose own category has gone.
+  const defaults = createDefaultCategories()
+  for (const fallbackId of Object.values(FALLBACK_CATEGORY_IDS)) {
+    if (!seen.has(fallbackId)) categories.push(defaults.find((c) => c.id === fallbackId))
   }
-  return categories.length > 1 ? categories : createDefaultCategories()
+  return categories.length > Object.keys(FALLBACK_CATEGORY_IDS).length
+    ? categories
+    : createDefaultCategories()
 }
 
 /**
@@ -62,7 +74,7 @@ export function normalizeState(raw) {
   if (!raw || typeof raw !== 'object') return base
 
   const categories = normalizeCategories(raw.categories)
-  const categoryIds = new Set(categories.map((category) => category.id))
+  const kindById = new Map(categories.map((category) => [category.id, category.kind]))
 
   const transactions = []
   const seenIds = new Set()
@@ -73,7 +85,11 @@ export function normalizeState(raw) {
       id: candidate.id,
       amountCents: candidate.amountCents,
       type: candidate.type,
-      categoryId: categoryIds.has(candidate.categoryId) ? candidate.categoryId : OTHER_CATEGORY_ID,
+      // A category of the wrong kind is as good as missing.
+      categoryId:
+        kindById.get(candidate.categoryId) === candidate.type
+          ? candidate.categoryId
+          : fallbackCategoryId(candidate.type),
       date: candidate.date,
       note: candidate.note,
       createdAt: Number.isFinite(candidate.createdAt) ? candidate.createdAt : 0,
@@ -81,9 +97,10 @@ export function normalizeState(raw) {
     })
   }
 
+  // Only spending has a budget, so income categories never carry one.
   const budgets = {}
   for (const [categoryId, cents] of Object.entries(raw.budgets ?? {})) {
-    if (categoryIds.has(categoryId) && isValidCents(cents)) budgets[categoryId] = cents
+    if (kindById.get(categoryId) === 'expense' && isValidCents(cents)) budgets[categoryId] = cents
   }
 
   return {

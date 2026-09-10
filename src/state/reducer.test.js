@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { reducer } from './reducer.js'
 import { createEmptyState } from '../domain/schema.js'
-import { OTHER_CATEGORY_ID } from '../domain/categories.js'
+import { FALLBACK_CATEGORY_IDS, OTHER_CATEGORY_ID } from '../domain/categories.js'
 import * as actions from './actions.js'
 
 const VALID = {
@@ -36,6 +36,9 @@ describe('transaction/add', () => {
       { ...VALID, type: 'transfer' },
       { ...VALID, date: '2026-02-30' },
       { ...VALID, categoryId: 'cat_missing' },
+      // An expense filed under an income category, and the reverse.
+      { ...VALID, categoryId: 'cat_salary' },
+      { ...VALID, type: 'income', categoryId: 'cat_food' },
     ]
     for (const value of bad) {
       expect(reducer(base, actions.addTransaction(value)).transactions, JSON.stringify(value)).toHaveLength(0)
@@ -72,13 +75,17 @@ describe('transaction/delete', () => {
 
 describe('categories', () => {
   it('adds and renames', () => {
-    const added = reducer(createEmptyState(), actions.addCategory('  Books  ', 'red'))
+    const added = reducer(createEmptyState(), actions.addCategory('  Books  ', 'expense', 'red'))
     const category = added.categories.at(-1)
-    expect(category).toMatchObject({ name: 'Books', colorKey: 'red', builtin: false })
+    expect(category).toMatchObject({ name: 'Books', kind: 'expense', colorKey: 'red', builtin: false })
 
-    // An unknown slot is replaced with the next one in palette order.
-    const fallback = reducer(createEmptyState(), actions.addCategory('Pets', '#ff0000'))
+    // An unknown slot is replaced with the next one its own kind has not used.
+    const fallback = reducer(createEmptyState(), actions.addCategory('Pets', 'expense', '#ff0000'))
     expect(fallback.categories.at(-1).colorKey).toBe('red')
+
+    // A category has to be one kind or the other.
+    const base = createEmptyState()
+    expect(reducer(base, actions.addCategory('Savings', 'transfer', 'red'))).toBe(base)
 
     const renamed = reducer(added, actions.renameCategory(category.id, 'Reading'))
     expect(renamed.categories.at(-1).name).toBe('Reading')
@@ -102,9 +109,23 @@ describe('categories', () => {
     expect(next.transactions[0].categoryId).toBe(OTHER_CATEGORY_ID)
   })
 
-  it('never deletes Other, because transactions need somewhere to land', () => {
-    const state = stateWith({ ...VALID, categoryId: OTHER_CATEGORY_ID })
-    expect(reducer(state, actions.deleteCategory(OTHER_CATEGORY_ID, 'cat_food'))).toBe(state)
+  it('refuses to move spending into an income category', () => {
+    const state = stateWith(VALID)
+    const next = reducer(state, actions.deleteCategory('cat_food', 'cat_salary'))
+    expect(next.transactions[0].categoryId).toBe(OTHER_CATEGORY_ID)
+  })
+
+  it('keeps income transactions inside income categories when one is deleted', () => {
+    const state = stateWith({ ...VALID, type: 'income', categoryId: 'cat_gift' })
+    const next = reducer(state, actions.deleteCategory('cat_gift', 'cat_freelance'))
+    expect(next.transactions[0].categoryId).toBe('cat_freelance')
+  })
+
+  it('never deletes either fallback, because transactions need somewhere to land', () => {
+    for (const fallbackId of Object.values(FALLBACK_CATEGORY_IDS)) {
+      const state = createEmptyState()
+      expect(reducer(state, actions.deleteCategory(fallbackId, 'cat_food')), fallbackId).toBe(state)
+    }
   })
 })
 
@@ -120,9 +141,10 @@ describe('budget/set', () => {
     expect(reducer(state, actions.setBudget('cat_food', -1)).budgets).toEqual({})
   })
 
-  it('ignores unknown categories', () => {
+  it('ignores unknown categories, and income categories, which have no limit', () => {
     const state = createEmptyState()
     expect(reducer(state, actions.setBudget('cat_missing', 100))).toBe(state)
+    expect(reducer(state, actions.setBudget('cat_salary', 100))).toBe(state)
   })
 })
 

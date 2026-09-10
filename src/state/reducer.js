@@ -1,4 +1,9 @@
-import { OTHER_CATEGORY_ID } from '../domain/categories.js'
+import {
+  categoriesOfKind,
+  fallbackCategoryId,
+  isCategoryKind,
+  isFallbackCategory,
+} from '../domain/categories.js'
 import { colorKeyAt, isColorKey } from '../domain/palette.js'
 import { isValidCents } from '../domain/money.js'
 import { normalizeState } from '../domain/schema.js'
@@ -14,7 +19,7 @@ export function reducer(state, action) {
     case 'transaction/add': {
       const transaction = action.payload
       if (!isStorableTransaction(transaction)) return state
-      if (!hasCategory(state, transaction.categoryId)) return state
+      if (!hasCategoryOfKind(state, transaction.categoryId, transaction.type)) return state
       return { ...state, transactions: [transaction, ...state.transactions] }
     }
 
@@ -25,7 +30,7 @@ export function reducer(state, action) {
 
       const next = { ...existing, ...value, id, createdAt: existing.createdAt, updatedAt }
       if (!isStorableTransaction(next)) return state
-      if (!hasCategory(state, next.categoryId)) return state
+      if (!hasCategoryOfKind(state, next.categoryId, next.type)) return state
 
       return {
         ...state,
@@ -45,14 +50,22 @@ export function reducer(state, action) {
     }
 
     case 'category/add': {
-      const { id, name, colorKey } = action.payload
+      const { id, name, kind, colorKey } = action.payload
       const trimmed = String(name ?? '').trim()
-      if (trimmed === '' || hasCategory(state, id)) return state
+      if (trimmed === '' || !isCategoryKind(kind) || hasCategory(state, id)) return state
       return {
         ...state,
         categories: [
           ...state.categories,
-          { id, name: trimmed, colorKey: isColorKey(colorKey) ? colorKey : colorKeyAt(state.categories.length), builtin: false },
+          {
+            id,
+            name: trimmed,
+            kind,
+            colorKey: isColorKey(colorKey)
+              ? colorKey
+              : colorKeyAt(categoriesOfKind(state.categories, kind).length),
+            builtin: false,
+          },
         ],
       }
     }
@@ -70,10 +83,17 @@ export function reducer(state, action) {
     }
 
     case 'category/delete': {
-      const { id, reassignTo = OTHER_CATEGORY_ID } = action.payload
-      // Other is the fallback every transaction can fall back to; it stays.
-      if (id === OTHER_CATEGORY_ID || !hasCategory(state, id)) return state
-      const target = hasCategory(state, reassignTo) && reassignTo !== id ? reassignTo : OTHER_CATEGORY_ID
+      const { id, reassignTo } = action.payload
+      const removed = state.categories.find((category) => category.id === id)
+      // Each kind's fallback is where its orphans land, so it stays.
+      if (!removed || isFallbackCategory(id)) return state
+
+      // Moving spending into an income category would corrupt every total.
+      const proposed = state.categories.find((category) => category.id === reassignTo)
+      const target =
+        proposed && proposed.id !== id && proposed.kind === removed.kind
+          ? proposed.id
+          : fallbackCategoryId(removed.kind)
 
       const { [id]: _removed, ...budgets } = state.budgets
       return {
@@ -88,7 +108,8 @@ export function reducer(state, action) {
 
     case 'budget/set': {
       const { categoryId, cents } = action.payload
-      if (!hasCategory(state, categoryId)) return state
+      // Budgets are a spending limit; income categories do not get one.
+      if (!hasCategoryOfKind(state, categoryId, 'expense')) return state
 
       if (!isValidCents(cents)) {
         if (!(categoryId in state.budgets)) return state
@@ -121,4 +142,8 @@ export function reducer(state, action) {
 
 function hasCategory(state, id) {
   return state.categories.some((category) => category.id === id)
+}
+
+function hasCategoryOfKind(state, id, kind) {
+  return state.categories.some((category) => category.id === id && category.kind === kind)
 }

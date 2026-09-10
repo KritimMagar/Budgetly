@@ -81,6 +81,7 @@ export function budgetProgress(monthTransactions, budgets, categories) {
   let spentCents = 0
 
   for (const category of categories) {
+    if (category.kind !== 'expense') continue
     const budgetCents = budgets[category.id]
     if (!budgetCents) continue
 

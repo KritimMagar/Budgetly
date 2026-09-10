@@ -5,7 +5,7 @@ import BudgetRow from '../components/budgets/BudgetRow.jsx'
 import Button from '../components/ui/Button.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
 import Modal from '../components/ui/Modal.jsx'
-import { findCategory } from '../domain/categories.js'
+import { categoriesOfKind, findCategory } from '../domain/categories.js'
 import { formatMoney } from '../domain/money.js'
 import { budgetProgress, transactionsInMonth } from '../domain/summary.js'
 import { setBudget } from '../state/actions.js'
@@ -24,7 +24,10 @@ export default function BudgetsView({ month, onMonthChange }) {
     [monthTransactions, state.budgets, state.categories],
   )
 
-  const withoutBudget = state.categories.filter((category) => !state.budgets[category.id])
+  // Budgets cap spending, so only expense categories can take one.
+  const withoutBudget = categoriesOfKind(state.categories, 'expense').filter(
+    (category) => !state.budgets[category.id],
+  )
   const editingCategory = editingId ? findCategory(state.categories, editingId) : null
   const currency = state.settings.currency
 

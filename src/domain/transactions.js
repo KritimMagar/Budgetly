@@ -10,11 +10,13 @@ export function isTransactionType(value) {
 
 /**
  * Checks a form draft before it reaches the store. Amount arrives as the raw
- * string the user typed and leaves as cents.
+ * string the user typed and leaves as cents. The category has to be one of the
+ * kind that matches the transaction type — an expense cannot be filed under an
+ * income category.
  *
  * @returns {{ok: true, value: object} | {ok: false, errors: Record<string, string>}}
  */
-export function validateTransaction(draft, { categoryIds }) {
+export function validateTransaction(draft, { categories }) {
   const errors = {}
 
   const amount = parseAmount(draft.amount)
@@ -22,8 +24,12 @@ export function validateTransaction(draft, { categoryIds }) {
 
   if (!isTransactionType(draft.type)) errors.type = 'Choose income or expense'
 
+  const category = categories.find((entry) => entry.id === draft.categoryId)
   if (!draft.categoryId) errors.categoryId = 'Choose a category'
-  else if (!categoryIds.includes(draft.categoryId)) errors.categoryId = 'That category no longer exists'
+  else if (!category) errors.categoryId = 'That category no longer exists'
+  else if (isTransactionType(draft.type) && category.kind !== draft.type) {
+    errors.categoryId = `Choose an ${draft.type} category`
+  }
 
   if (!draft.date) errors.date = 'Choose a date'
   else if (!isValidDate(draft.date)) errors.date = 'Enter a real date'
