@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import CategoryManager from '../components/settings/CategoryManager.jsx'
 import CurrencySetting from '../components/settings/CurrencySetting.jsx'
+import DataTransfer from '../components/settings/DataTransfer.jsx'
 import SegmentedControl from '../components/ui/SegmentedControl.jsx'
-import { addCategory, deleteCategory, renameCategory, updateSettings } from '../state/actions.js'
+import { addCategory, deleteCategory, renameCategory, replaceState, updateSettings } from '../state/actions.js'
 import { useStore } from '../state/hooks.js'
+import { mergeImport } from '../domain/csv.js'
 
 const THEMES = [
   { value: 'dark', label: 'Dark' },
@@ -62,6 +64,11 @@ export default function SettingsView() {
         title="Expense categories"
         description="Where your spending is filed."
         {...managerProps}
+      />
+
+      <DataTransfer
+        state={state}
+        onImport={(result, options) => dispatch(replaceState(mergeImport(state, result, options)))}
       />
 
       <CategoryManager
