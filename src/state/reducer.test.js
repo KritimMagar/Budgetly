@@ -9,6 +9,7 @@ const VALID = {
   type: 'expense',
   categoryId: 'cat_food',
   date: '2026-09-10',
+  time: '14:35',
   note: 'Lunch',
 }
 
@@ -35,6 +36,8 @@ describe('transaction/add', () => {
       { ...VALID, amountCents: 12.5 },
       { ...VALID, type: 'transfer' },
       { ...VALID, date: '2026-02-30' },
+      { ...VALID, time: '24:00' },
+      { ...VALID, time: undefined },
       { ...VALID, categoryId: 'cat_missing' },
       // An expense filed under an income category, and the reverse.
       { ...VALID, categoryId: 'cat_salary' },

@@ -3,7 +3,7 @@ import Button from '../ui/Button.jsx'
 import Field, { controlClass, controlErrorClass } from '../ui/Field.jsx'
 import TypeToggle from './TypeToggle.jsx'
 import { centsToDecimalString, currencySymbol } from '../../domain/money.js'
-import { todayISO } from '../../domain/dates.js'
+import { formatTimeLabel, nowTime, todayISO } from '../../domain/dates.js'
 import { validateTransaction } from '../../domain/transactions.js'
 import { categoriesOfKind, findCategory } from '../../domain/categories.js'
 
@@ -13,13 +13,15 @@ function firstCategoryId(categories, kind) {
 
 function draftFrom(transaction, fallbackDate) {
   if (!transaction) {
-    return { amount: '', type: 'expense', categoryId: '', date: fallbackDate, note: '' }
+    // No time yet: one is taken from the clock when the form is submitted.
+    return { amount: '', type: 'expense', categoryId: '', date: fallbackDate, time: null, note: '' }
   }
   return {
     amount: centsToDecimalString(transaction.amountCents),
     type: transaction.type,
     categoryId: transaction.categoryId,
     date: transaction.date,
+    time: transaction.time,
     note: transaction.note ?? '',
   }
 }
@@ -44,6 +46,8 @@ export default function TransactionForm({
   })
   const [errors, setErrors] = useState({})
   const [confirmingDelete, setConfirmingDelete] = useState(false)
+  // The time field stays out of the way until it needs correcting.
+  const [editingTime, setEditingTime] = useState(false)
 
   // Only the categories belonging to the chosen type are ever offered.
   const options = categoriesOfKind(categories, draft.type)
@@ -65,9 +69,15 @@ export default function TransactionForm({
     setErrors(({ type: _t, categoryId: _c, ...rest }) => rest)
   }
 
+  function revealTime() {
+    setDraft((current) => ({ ...current, time: current.time ?? nowTime() }))
+    setEditingTime(true)
+  }
+
   function handleSubmit(event) {
     event.preventDefault()
-    const result = validateTransaction(draft, { categories })
+    // An untouched new transaction is stamped at the moment it is saved.
+    const result = validateTransaction({ ...draft, time: draft.time ?? nowTime() }, { categories })
     if (!result.ok) {
       setErrors(result.errors)
       return
@@ -128,6 +138,35 @@ export default function TransactionForm({
           />
         )}
       </Field>
+
+      {editingTime ? (
+        <Field label="Time" error={errors.time}>
+          {(props) => (
+            <input
+              {...props}
+              value={draft.time ?? ''}
+              onChange={(event) => set('time')(event.target.value)}
+              type="time"
+              className={`${controlClass} tabular ${errors.time ? controlErrorClass : ''}`}
+            />
+          )}
+        </Field>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-sm text-zinc-500 dark:text-zinc-400">
+            {transaction
+              ? `Logged at ${formatTimeLabel(transaction.time)}`
+              : 'Time is recorded when you save'}
+          </p>
+          <button
+            type="button"
+            onClick={revealTime}
+            className="rounded-lg px-2 py-1 text-sm font-medium text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/40"
+          >
+            Edit time
+          </button>
+        </div>
+      )}
 
       <Field label="Note" error={errors.note} hint="Optional">
         {(props) => (

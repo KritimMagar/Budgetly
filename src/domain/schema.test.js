@@ -8,6 +8,7 @@ const transaction = {
   type: 'expense',
   categoryId: 'cat_food',
   date: '2026-09-10',
+  time: '14:35',
   note: '',
   createdAt: 1,
   updatedAt: 1,
@@ -58,6 +59,25 @@ describe('normalizeState', () => {
       transactions: [{ ...transaction, type: 'income', categoryId: 'cat_gone' }],
     })
     expect(income.transactions[0].categoryId).toBe(FALLBACK_CATEGORY_IDS.income)
+  })
+
+  it('gives a transaction stored before times existed midnight, rather than dropping it', () => {
+    const { time, ...withoutTime } = transaction
+    const state = normalizeState({
+      transactions: [
+        withoutTime,
+        { ...transaction, id: 'txn_2', time: '24:99' },
+        { ...transaction, id: 'txn_3', time: 7 },
+        { ...transaction, id: 'txn_4', time: '08:15' },
+      ],
+    })
+
+    expect(state.transactions.map((t) => [t.id, t.time])).toEqual([
+      ['txn_1', '00:00'],
+      ['txn_2', '00:00'],
+      ['txn_3', '00:00'],
+      ['txn_4', '08:15'],
+    ])
   })
 
   it('rehomes a transaction filed under a category of the wrong kind', () => {

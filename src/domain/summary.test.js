@@ -10,6 +10,7 @@ const txn = (over) => ({
   type: 'expense',
   categoryId: 'cat_food',
   date: '2026-09-10',
+  time: '12:00',
   note: '',
   ...over,
 })

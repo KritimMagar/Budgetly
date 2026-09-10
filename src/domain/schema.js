@@ -6,6 +6,7 @@ import {
 } from './categories.js'
 import { isStorableTransaction } from './transactions.js'
 import { isValidCents } from './money.js'
+import { MIDNIGHT, isValidTime } from './dates.js'
 import { COLOR_KEYS, colorKeyAt, isColorKey } from './palette.js'
 
 export const STORAGE_KEY = 'budgetly.v1'
@@ -120,7 +121,13 @@ export function normalizeState(raw) {
 
   const transactions = []
   const seenIds = new Set()
-  for (const candidate of Array.isArray(raw.transactions) ? raw.transactions : []) {
+  for (const stored of Array.isArray(raw.transactions) ? raw.transactions : []) {
+    // Transactions written before times existed have none; they start at
+    // midnight rather than being thrown away as unstorable.
+    const candidate = stored && typeof stored === 'object'
+      ? { ...stored, time: isValidTime(stored.time) ? stored.time : MIDNIGHT }
+      : stored
+
     if (!isStorableTransaction(candidate) || seenIds.has(candidate.id)) continue
     seenIds.add(candidate.id)
     transactions.push({
@@ -133,6 +140,7 @@ export function normalizeState(raw) {
           ? candidate.categoryId
           : fallbackCategoryId(candidate.type),
       date: candidate.date,
+      time: candidate.time,
       note: candidate.note,
       createdAt: Number.isFinite(candidate.createdAt) ? candidate.createdAt : 0,
       updatedAt: Number.isFinite(candidate.updatedAt) ? candidate.updatedAt : 0,

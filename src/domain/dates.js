@@ -6,6 +6,10 @@
 
 const DATE_RE = /^(\d{4})-(\d{2})-(\d{2})$/
 const MONTH_RE = /^(\d{4})-(\d{2})$/
+const TIME_RE = /^([01]\d|2[0-3]):([0-5]\d)$/
+
+/** What a transaction gets when its stored data predates times. */
+export const MIDNIGHT = '00:00'
 
 export function isValidDate(value) {
   const match = DATE_RE.exec(String(value ?? ''))
@@ -20,6 +24,17 @@ export function isValidMonth(value) {
   if (!match) return false
   const month = Number(match[2])
   return month >= 1 && month <= 12
+}
+
+export function isValidTime(value) {
+  return TIME_RE.test(String(value ?? ''))
+}
+
+/** Local wall-clock time, to the minute. */
+export function nowTime(now = new Date()) {
+  const hours = String(now.getHours()).padStart(2, '0')
+  const minutes = String(now.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
 }
 
 /** Today in the user's own calendar, not UTC. */
@@ -75,5 +90,14 @@ export function formatDateLabel(dateISO) {
   const [year, month, day] = dateISO.split('-').map(Number)
   return new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' }).format(
     new Date(Date.UTC(year, month - 1, day)),
+  )
+}
+
+export function formatTimeLabel(time) {
+  if (!isValidTime(time)) return ''
+  const [hours, minutes] = time.split(':').map(Number)
+  // A fixed date: only the clock part is formatted, in the viewer's convention.
+  return new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' }).format(
+    new Date(2000, 0, 1, hours, minutes),
   )
 }

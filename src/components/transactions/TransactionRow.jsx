@@ -1,4 +1,4 @@
-import { formatDateLabel } from '../../domain/dates.js'
+import { formatDateLabel, formatTimeLabel } from '../../domain/dates.js'
 import { formatMoney, signedCents } from '../../domain/money.js'
 import { colorFor } from '../../domain/palette.js'
 
@@ -33,8 +33,9 @@ export default function TransactionRow({ transaction, category, currency, theme,
           >
             {formatMoney(signedCents(transaction), currency, { signDisplay: 'exceptZero' })}
           </span>
-          <span className="block text-xs text-zinc-500 dark:text-zinc-400">
+          <span className="block text-xs tabular text-zinc-500 dark:text-zinc-400">
             {formatDateLabel(transaction.date)}
+            {transaction.time ? ` · ${formatTimeLabel(transaction.time)}` : null}
           </span>
         </span>
       </button>

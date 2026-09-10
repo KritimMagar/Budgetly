@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
+  MIDNIGHT,
   addMonths,
   currentMonth,
   formatMonthLabel,
@@ -9,6 +10,9 @@ import {
   isWithinRange,
   monthOf,
   monthRange,
+  formatTimeLabel,
+  isValidTime,
+  nowTime,
   todayISO,
 } from './dates.js'
 
@@ -83,5 +87,30 @@ describe('labels', () => {
   it('renders a month without shifting into the previous one', () => {
     expect(formatMonthLabel('2026-01')).toMatch(/2026/)
     expect(formatMonthLabel('2026-01')).not.toMatch(/2025/)
+  })
+})
+
+describe('times', () => {
+  it('accepts 24-hour times and rejects anything else', () => {
+    for (const value of ['00:00', '09:05', '13:30', '23:59']) {
+      expect(isValidTime(value), value).toBe(true)
+    }
+    for (const value of ['24:00', '23:60', '9:05', '09:5', '', ' 09:05', null, undefined, '12:00:00']) {
+      expect(isValidTime(value), String(value)).toBe(false)
+    }
+  })
+
+  it('reads the local clock, zero padded so times sort as text', () => {
+    expect(nowTime(new Date(2026, 8, 10, 9, 5))).toBe('09:05')
+    expect(nowTime(new Date(2026, 8, 10, 23, 59))).toBe('23:59')
+    expect(nowTime(new Date(2026, 8, 10, 0, 0))).toBe(MIDNIGHT)
+    expect('09:05' < '13:30').toBe(true)
+  })
+
+  it('formats a time for display and ignores an unusable one', () => {
+    expect(formatTimeLabel('13:30')).toMatch(/30/)
+    expect(formatTimeLabel('13:30')).toMatch(/1?3/)
+    expect(formatTimeLabel('nope')).toBe('')
+    expect(formatTimeLabel(undefined)).toBe('')
   })
 })

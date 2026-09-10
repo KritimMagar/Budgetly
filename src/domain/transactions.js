@@ -1,5 +1,5 @@
 import { isValidCents, parseAmount } from './money.js'
-import { isValidDate } from './dates.js'
+import { MIDNIGHT, isValidDate, isValidTime } from './dates.js'
 
 export const TRANSACTION_TYPES = ['income', 'expense']
 export const MAX_NOTE_LENGTH = 140
@@ -34,6 +34,8 @@ export function validateTransaction(draft, { categories }) {
   if (!draft.date) errors.date = 'Choose a date'
   else if (!isValidDate(draft.date)) errors.date = 'Enter a real date'
 
+  if (!isValidTime(draft.time)) errors.time = 'Enter a time as HH:MM'
+
   const note = String(draft.note ?? '').trim()
   if (note.length > MAX_NOTE_LENGTH) errors.note = `Keep the note under ${MAX_NOTE_LENGTH} characters`
 
@@ -46,6 +48,7 @@ export function validateTransaction(draft, { categories }) {
       type: draft.type,
       categoryId: draft.categoryId,
       date: draft.date,
+      time: draft.time,
       note,
     },
   }
@@ -61,14 +64,22 @@ export function isStorableTransaction(value) {
     isTransactionType(value.type) &&
     typeof value.categoryId === 'string' &&
     isValidDate(value.date) &&
+    isValidTime(value.time) &&
     typeof value.note === 'string'
   )
 }
 
-/** Newest first, with a stable tie-break so re-renders keep the same order. */
+/**
+ * Newest first: by date, then by time within the day, with a stable tie-break
+ * so re-renders keep the same order. Times are zero-padded 24-hour strings, so
+ * comparing them as text orders them correctly.
+ */
 export function sortTransactions(transactions) {
   return [...transactions].sort((a, b) => {
     if (a.date !== b.date) return a.date < b.date ? 1 : -1
+    const timeA = a.time ?? MIDNIGHT
+    const timeB = b.time ?? MIDNIGHT
+    if (timeA !== timeB) return timeA < timeB ? 1 : -1
     if (a.createdAt !== b.createdAt) return (b.createdAt ?? 0) - (a.createdAt ?? 0)
     return a.id < b.id ? 1 : -1
   })
