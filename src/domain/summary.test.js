@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { breakdownByCategory, monthTotals, monthsWithData, transactionsInMonth } from './summary.js'
+import { breakdownByCategory, budgetProgress, monthTotals, monthsWithData, transactionsInMonth } from './summary.js'
 import { createDefaultCategories } from './categories.js'
 
 const categories = createDefaultCategories()
@@ -82,5 +82,65 @@ describe('monthsWithData', () => {
     expect(
       monthsWithData([txn({ date: '2026-09-10' }), txn({ date: '2026-07-01' }), txn({ date: '2026-09-30' })]),
     ).toEqual(['2026-09', '2026-07'])
+  })
+})
+
+describe('budgetProgress', () => {
+  const budgets = { cat_food: 20000, cat_fun: 5000, cat_rent: 100000 }
+
+  it('reports spend, remainder and state per budgeted category', () => {
+    const { rows } = budgetProgress(
+      [
+        txn({ categoryId: 'cat_food', amountCents: 5000 }),
+        txn({ categoryId: 'cat_fun', amountCents: 6000 }),
+        txn({ categoryId: 'cat_rent', amountCents: 80000 }),
+      ],
+      budgets,
+      categories,
+    )
+
+    expect(rows.map((row) => [row.name, row.spentCents, row.remainingCents, row.state])).toEqual([
+      ['Fun', 6000, -1000, 'over'],
+      ['Rent', 80000, 20000, 'warning'],
+      ['Food', 5000, 15000, 'under'],
+    ])
+  })
+
+  it('warns from 80% and only counts expenses', () => {
+    const at80 = budgetProgress([txn({ categoryId: 'cat_fun', amountCents: 4000 })], budgets, categories)
+    expect(at80.rows.find((row) => row.name === 'Fun').state).toBe('warning')
+
+    const justUnder = budgetProgress([txn({ categoryId: 'cat_fun', amountCents: 3999 })], budgets, categories)
+    expect(justUnder.rows.find((row) => row.name === 'Fun').state).toBe('under')
+
+    const income = budgetProgress(
+      [txn({ categoryId: 'cat_fun', type: 'income', amountCents: 9999 })],
+      budgets,
+      categories,
+    )
+    expect(income.rows.find((row) => row.name === 'Fun').spentCents).toBe(0)
+  })
+
+  it('exactly on the limit is not yet over', () => {
+    const { rows } = budgetProgress([txn({ categoryId: 'cat_fun', amountCents: 5000 })], budgets, categories)
+    const fun = rows.find((row) => row.name === 'Fun')
+    expect(fun.state).toBe('warning')
+    expect(fun.remainingCents).toBe(0)
+  })
+
+  it('skips categories without a budget and totals the rest', () => {
+    const { rows, totals } = budgetProgress(
+      [txn({ categoryId: 'cat_bills', amountCents: 9999 }), txn({ categoryId: 'cat_food', amountCents: 5000 })],
+      { cat_food: 20000 },
+      categories,
+    )
+    expect(rows).toHaveLength(1)
+    expect(totals).toEqual({ budgetedCents: 20000, spentCents: 5000, remainingCents: 15000, overCount: 0 })
+  })
+
+  it('has nothing to report when no budgets are set', () => {
+    const { rows, totals } = budgetProgress([txn({ amountCents: 100 })], {}, categories)
+    expect(rows).toEqual([])
+    expect(totals.budgetedCents).toBe(0)
   })
 })

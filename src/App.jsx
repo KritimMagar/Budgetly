@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import AppShell from './components/layout/AppShell.jsx'
+import BudgetsView from './views/BudgetsView.jsx'
 import MonthView from './views/MonthView.jsx'
 import TransactionsView from './views/TransactionsView.jsx'
 import { currentMonth } from './domain/dates.js'
@@ -13,7 +14,6 @@ const TABS = [
 
 // Replaced view by view as each feature lands.
 const PLACEHOLDERS = {
-  budgets: 'Monthly budget per category and progress against it.',
   settings: 'Currency, categories, import and export.',
 }
 
@@ -27,6 +27,7 @@ export default function App() {
     <AppShell tabs={TABS} activeTab={tab} onTabChange={setTab}>
       {tab === 'month' ? <MonthView month={month} onMonthChange={setMonth} /> : null}
       {tab === 'transactions' ? <TransactionsView /> : null}
+      {tab === 'budgets' ? <BudgetsView month={month} onMonthChange={setMonth} /> : null}
       {PLACEHOLDERS[tab] ? (
         <section className="rounded-xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
           {PLACEHOLDERS[tab]}
