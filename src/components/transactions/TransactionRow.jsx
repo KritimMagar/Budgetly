@@ -1,7 +1,8 @@
 import { formatDateLabel } from '../../domain/dates.js'
 import { formatMoney, signedCents } from '../../domain/money.js'
+import { colorFor } from '../../domain/palette.js'
 
-export default function TransactionRow({ transaction, category, currency, onEdit }) {
+export default function TransactionRow({ transaction, category, currency, theme, onEdit }) {
   const income = transaction.type === 'income'
 
   return (
@@ -14,7 +15,7 @@ export default function TransactionRow({ transaction, category, currency, onEdit
         <span
           aria-hidden="true"
           className="h-8 w-1.5 shrink-0 rounded-full"
-          style={{ backgroundColor: category?.color ?? '#94a3b8' }}
+          style={{ backgroundColor: colorFor(category?.colorKey, theme) }}
         />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium">{category?.name ?? 'Unknown'}</span>

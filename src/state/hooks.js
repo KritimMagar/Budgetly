@@ -30,3 +30,7 @@ export function useTransactions() {
 export function useBudgets() {
   return useStore().state.budgets
 }
+
+export function useTheme() {
+  return useStore().state.settings.theme
+}

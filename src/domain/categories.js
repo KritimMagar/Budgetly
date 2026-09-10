@@ -1,20 +1,16 @@
+import { COLOR_KEYS, colorKeyAt } from './palette.js'
+
 /** Every transaction keeps a category, so there is always a fallback to move to. */
 export const OTHER_CATEGORY_ID = 'cat_other'
 
 export const DEFAULT_CATEGORIES = [
-  { id: 'cat_food', name: 'Food', color: '#f97316', builtin: true },
-  { id: 'cat_rent', name: 'Rent', color: '#a78bfa', builtin: true },
-  { id: 'cat_transport', name: 'Transport', color: '#38bdf8', builtin: true },
-  { id: 'cat_bills', name: 'Bills', color: '#facc15', builtin: true },
-  { id: 'cat_fun', name: 'Fun', color: '#f472b6', builtin: true },
-  { id: 'cat_health', name: 'Health', color: '#34d399', builtin: true },
-  { id: OTHER_CATEGORY_ID, name: 'Other', color: '#94a3b8', builtin: true },
-]
-
-/** Offered when adding a custom category. */
-export const CATEGORY_COLORS = [
-  '#f97316', '#a78bfa', '#38bdf8', '#facc15', '#f472b6',
-  '#34d399', '#94a3b8', '#fb7185', '#22d3ee', '#c084fc',
+  { id: 'cat_food', name: 'Food', colorKey: 'blue', builtin: true },
+  { id: 'cat_rent', name: 'Rent', colorKey: 'orange', builtin: true },
+  { id: 'cat_transport', name: 'Transport', colorKey: 'aqua', builtin: true },
+  { id: 'cat_bills', name: 'Bills', colorKey: 'yellow', builtin: true },
+  { id: 'cat_fun', name: 'Fun', colorKey: 'magenta', builtin: true },
+  { id: 'cat_health', name: 'Health', colorKey: 'green', builtin: true },
+  { id: OTHER_CATEGORY_ID, name: 'Other', colorKey: 'violet', builtin: true },
 ]
 
 export const MAX_CATEGORY_NAME = 24
@@ -49,8 +45,8 @@ export function validateCategoryName(rawName, categories, { excludeId = null } =
   return { ok: true, name }
 }
 
-/** Picks the least-used colour so new categories stay visually distinct. */
-export function nextCategoryColor(categories) {
-  const used = new Set(categories.map((category) => category.color))
-  return CATEGORY_COLORS.find((color) => !used.has(color)) ?? CATEGORY_COLORS[0]
+/** Next free palette slot, so new categories stay distinguishable in order. */
+export function nextColorKey(categories) {
+  const used = new Set(categories.map((category) => category.colorKey))
+  return COLOR_KEYS.find((key) => !used.has(key)) ?? colorKeyAt(categories.length)
 }

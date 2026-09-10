@@ -1,6 +1,7 @@
 import { createDefaultCategories, OTHER_CATEGORY_ID } from './categories.js'
 import { isStorableTransaction } from './transactions.js'
 import { isValidCents } from './money.js'
+import { colorKeyAt, isColorKey } from './palette.js'
 
 export const STORAGE_KEY = 'budgetly.v1'
 export const SCHEMA_VERSION = 1
@@ -38,7 +39,7 @@ function normalizeCategories(raw) {
     categories.push({
       id: candidate.id,
       name,
-      color: typeof candidate.color === 'string' ? candidate.color : '#94a3b8',
+      colorKey: isColorKey(candidate.colorKey) ? candidate.colorKey : colorKeyAt(categories.length),
       builtin: candidate.builtin === true,
     })
   }

@@ -72,9 +72,13 @@ describe('transaction/delete', () => {
 
 describe('categories', () => {
   it('adds and renames', () => {
-    const added = reducer(createEmptyState(), actions.addCategory('  Books  ', '#fff'))
+    const added = reducer(createEmptyState(), actions.addCategory('  Books  ', 'red'))
     const category = added.categories.at(-1)
-    expect(category).toMatchObject({ name: 'Books', builtin: false })
+    expect(category).toMatchObject({ name: 'Books', colorKey: 'red', builtin: false })
+
+    // An unknown slot is replaced with the next one in palette order.
+    const fallback = reducer(createEmptyState(), actions.addCategory('Pets', '#ff0000'))
+    expect(fallback.categories.at(-1).colorKey).toBe('red')
 
     const renamed = reducer(added, actions.renameCategory(category.id, 'Reading'))
     expect(renamed.categories.at(-1).name).toBe('Reading')

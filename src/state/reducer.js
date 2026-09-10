@@ -1,4 +1,5 @@
 import { OTHER_CATEGORY_ID } from '../domain/categories.js'
+import { colorKeyAt, isColorKey } from '../domain/palette.js'
 import { isValidCents } from '../domain/money.js'
 import { normalizeState } from '../domain/schema.js'
 import { isStorableTransaction } from '../domain/transactions.js'
@@ -44,12 +45,15 @@ export function reducer(state, action) {
     }
 
     case 'category/add': {
-      const { id, name, color } = action.payload
+      const { id, name, colorKey } = action.payload
       const trimmed = String(name ?? '').trim()
       if (trimmed === '' || hasCategory(state, id)) return state
       return {
         ...state,
-        categories: [...state.categories, { id, name: trimmed, color, builtin: false }],
+        categories: [
+          ...state.categories,
+          { id, name: trimmed, colorKey: isColorKey(colorKey) ? colorKey : colorKeyAt(state.categories.length), builtin: false },
+        ],
       }
     }
 

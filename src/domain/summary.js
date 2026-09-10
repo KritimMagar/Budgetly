@@ -36,7 +36,7 @@ export function breakdownByCategory(transactions, categories, { type = 'expense'
     return {
       categoryId,
       name: category?.name ?? 'Unknown',
-      color: category?.color ?? '#94a3b8',
+      colorKey: category?.colorKey ?? 'violet',
       cents,
       percent: totalCents === 0 ? 0 : (cents / totalCents) * 100,
     }

@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 import MonthSwitcher from '../components/layout/MonthSwitcher.jsx'
+import CategoryBreakdown from '../components/summary/CategoryBreakdown.jsx'
 import SummaryCards from '../components/summary/SummaryCards.jsx'
 import EmptyState from '../components/ui/EmptyState.jsx'
-import { monthTotals, transactionsInMonth } from '../domain/summary.js'
+import { breakdownByCategory, monthTotals, transactionsInMonth } from '../domain/summary.js'
 import { useStore } from '../state/hooks.js'
 
 export default function MonthView({ month, onMonthChange }) {
@@ -13,6 +14,10 @@ export default function MonthView({ month, onMonthChange }) {
     [state.transactions, month],
   )
   const totals = useMemo(() => monthTotals(monthTransactions), [monthTransactions])
+  const breakdown = useMemo(
+    () => breakdownByCategory(monthTransactions, state.categories),
+    [monthTransactions, state.categories],
+  )
 
   return (
     <div className="space-y-4">
@@ -23,7 +28,14 @@ export default function MonthView({ month, onMonthChange }) {
           title="Nothing recorded this month"
           description="Add a transaction, or use the arrows above to look at another month."
         />
-      ) : null}
+      ) : (
+        <CategoryBreakdown
+          rows={breakdown.rows}
+          totalCents={breakdown.totalCents}
+          currency={state.settings.currency}
+          theme={state.settings.theme}
+        />
+      )}
     </div>
   )
 }

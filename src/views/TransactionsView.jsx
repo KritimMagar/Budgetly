@@ -52,6 +52,7 @@ export default function TransactionsView() {
           transactions={transactions}
           categories={state.categories}
           currency={state.settings.currency}
+          theme={state.settings.theme}
           onEdit={(transaction) => setEditor({ id: transaction.id })}
         />
       )}

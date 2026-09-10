@@ -20,8 +20,8 @@ export function deleteTransaction(id) {
   return { type: 'transaction/delete', payload: { id } }
 }
 
-export function addCategory(name, color) {
-  return { type: 'category/add', payload: { id: createId('cat'), name, color } }
+export function addCategory(name, colorKey) {
+  return { type: 'category/add', payload: { id: createId('cat'), name, colorKey } }
 }
 
 export function renameCategory(id, name) {
