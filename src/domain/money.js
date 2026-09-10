@@ -84,3 +84,13 @@ export function formatMoney(cents, currency = 'EUR', options = {}) {
     return `${currency} ${centsToDecimalString(cents)}`
   }
 }
+
+/** The symbol a currency renders with, for input prefixes. Falls back to the code. */
+export function currencySymbol(currency = 'EUR') {
+  try {
+    const parts = new Intl.NumberFormat(undefined, { style: 'currency', currency }).formatToParts(0)
+    return parts.find((part) => part.type === 'currency')?.value ?? currency
+  } catch {
+    return currency
+  }
+}
